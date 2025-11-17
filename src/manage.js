@@ -106,6 +106,7 @@ function renderBookmark(node, topic, allFolders) {
 
   card.dataset.bookmarkId = node.id;
   card.dataset.folderId = node.parentId || '';
+  card.setAttribute('draggable', 'true');
 
   titleEl.textContent = node.title || node.url;
   domainEl.textContent = metadata.domain || new URL(node.url).hostname;

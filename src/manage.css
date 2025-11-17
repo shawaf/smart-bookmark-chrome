@@ -103,6 +103,14 @@ h1 {
   flex-direction: column;
   gap: 8px;
   cursor: grab;
+  user-select: none;
+  -webkit-user-drag: element;
+}
+
+.bookmark input,
+.bookmark textarea,
+.bookmark select {
+  user-select: text;
 }
 
 .bookmark-head {

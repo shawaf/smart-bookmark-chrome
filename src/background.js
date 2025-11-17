@@ -1,17 +1,79 @@
 const SMART_ROOT_TITLE = 'Smart Bookmarks';
 const DEFAULT_TOPIC = 'Unsorted';
-const TOPIC_KEYWORDS = {
-  Technology: ['tech', 'developer', 'software', 'ai', 'cloud', 'programming', 'code', 'api', 'framework'],
-  Business: ['business', 'finance', 'startup', 'marketing', 'sales', 'economy', 'invest', 'product', 'growth'],
-  Education: ['course', 'tutorial', 'learn', 'university', 'school', 'research', 'study', 'lesson'],
-  Entertainment: ['movie', 'music', 'game', 'tv', 'show', 'podcast', 'film', 'trailer', 'celebrity'],
-  News: ['news', 'breaking', 'politics', 'world', 'local', 'report', 'journal', 'article'],
-  Design: ['design', 'ux', 'ui', 'graphic', 'illustration', 'typography', 'layout'],
-  Science: ['science', 'biology', 'chemistry', 'physics', 'space', 'nature', 'health', 'medical'],
-  Shopping: ['shop', 'store', 'deal', 'review', 'price', 'ecommerce', 'sale', 'cart'],
-  Travel: ['travel', 'trip', 'hotel', 'flight', 'tour', 'destination', 'guide'],
-  Sports: ['sport', 'game', 'team', 'match', 'league', 'tournament', 'score']
-};
+const TOPIC_PROFILES = [
+  {
+    name: 'Technology',
+    keywords: ['tech', 'developer', 'software', 'programming', 'code', 'api', 'framework', 'cloud', 'ai', 'engineering'],
+    strongKeywords: ['javascript', 'python', 'hardware', 'device', 'laptop', 'chip'],
+    domainKeywords: ['dev', 'github', 'gitlab', 'stack', 'tech']
+  },
+  {
+    name: 'Finance & Banking',
+    keywords: ['finance', 'bank', 'banking', 'fintech', 'money', 'credit', 'loan', 'payment', 'interest', 'account'],
+    strongKeywords: ['investment', 'stocks', 'trading', 'crypto', 'forex', 'card'],
+    domainKeywords: ['bank', 'pay', 'finance', 'money', 'visa', 'mastercard']
+  },
+  {
+    name: 'Business & Work',
+    keywords: ['business', 'startup', 'marketing', 'sales', 'product', 'growth', 'work', 'management', 'leadership'],
+    strongKeywords: ['strategy', 'revenue', 'profit', 'staff', 'team', 'org'],
+    domainKeywords: ['business', 'corp', 'company']
+  },
+  {
+    name: 'Education & Learning',
+    keywords: ['course', 'tutorial', 'learn', 'university', 'school', 'research', 'study', 'lesson', 'guide'],
+    strongKeywords: ['how to', 'introduction', 'handbook', 'syllabus'],
+    domainKeywords: ['academy', 'edu', 'school', 'learn']
+  },
+  {
+    name: 'Entertainment & Media',
+    keywords: ['movie', 'music', 'game', 'tv', 'show', 'podcast', 'film', 'trailer', 'celebrity', 'youtube'],
+    strongKeywords: ['review', 'episode', 'season', 'playlist'],
+    domainKeywords: ['youtube', 'spotify', 'netflix', 'hulu']
+  },
+  {
+    name: 'News & Politics',
+    keywords: ['news', 'breaking', 'politics', 'world', 'local', 'report', 'journal', 'article'],
+    strongKeywords: ['election', 'policy', 'government'],
+    domainKeywords: ['news', 'times', 'daily']
+  },
+  {
+    name: 'Design & Creative',
+    keywords: ['design', 'ux', 'ui', 'graphic', 'illustration', 'typography', 'layout', 'branding'],
+    strongKeywords: ['figma', 'sketch', 'adobe'],
+    domainKeywords: ['design', 'dribbble', 'behance']
+  },
+  {
+    name: 'Science & Health',
+    keywords: ['science', 'biology', 'chemistry', 'physics', 'space', 'nature', 'health', 'medical'],
+    strongKeywords: ['research', 'study', 'clinic', 'disease', 'wellness'],
+    domainKeywords: ['med', 'sci', 'health']
+  },
+  {
+    name: 'Shopping & Reviews',
+    keywords: ['shop', 'store', 'deal', 'review', 'price', 'ecommerce', 'sale', 'cart', 'buy'],
+    strongKeywords: ['best', 'vs', 'comparison'],
+    domainKeywords: ['shop', 'store', 'amazon', 'ebay']
+  },
+  {
+    name: 'Travel & Places',
+    keywords: ['travel', 'trip', 'hotel', 'flight', 'tour', 'destination', 'guide', 'itinerary'],
+    strongKeywords: ['visa', 'airport', 'airline', 'booking'],
+    domainKeywords: ['travel', 'air', 'hotel']
+  },
+  {
+    name: 'Sports & Fitness',
+    keywords: ['sport', 'game', 'team', 'match', 'league', 'tournament', 'score', 'fitness', 'workout'],
+    strongKeywords: ['championship', 'cup', 'season'],
+    domainKeywords: ['sports', 'espn', 'nba', 'fifa']
+  },
+  {
+    name: 'Faith & Spirituality',
+    keywords: ['faith', 'religion', 'spiritual', 'prayer', 'worship', 'bible', 'church', 'quran', 'dua', 'azkar', 'اذكار', 'أذكار', 'اسلام', 'إسلام', 'مسجد'],
+    strongKeywords: ['sermon', 'verses', 'psalm', 'hadith'],
+    domainKeywords: ['church', 'mosque', 'islam', 'bible', 'quran']
+  }
+];
 
 const SMART_ROOT_ID_KEY = 'smartRootId';
 
@@ -84,17 +146,31 @@ async function collectPageMetadata(tabId) {
 
 function chooseTopic(pageMetadata, tab) {
   const text = `${tab.title} ${tab.url} ${pageMetadata.description} ${pageMetadata.keywords} ${pageMetadata.ogTitle} ${pageMetadata.snippet}`.toLowerCase();
-  const scores = Object.entries(TOPIC_KEYWORDS).map(([topic, keywords]) => {
-    const hits = keywords.reduce((count, keyword) => (text.includes(keyword) ? count + 1 : count), 0);
-    return { topic, score: hits };
+  const domain = new URL(tab.url).hostname.replace(/www\./, '').toLowerCase();
+
+  const scored = TOPIC_PROFILES.map((profile) => {
+    const baseHits = countHits(text, profile.keywords);
+    const strongHits = countHits(text, profile.strongKeywords || [], 2);
+    const domainHits = countHits(domain, profile.domainKeywords || [], 3);
+    const titleHits = countHits((tab.title || '').toLowerCase(), profile.strongKeywords || [], 2);
+
+    return {
+      topic: profile.name,
+      score: baseHits + strongHits + domainHits + titleHits
+    };
   });
 
-  const best = scores.sort((a, b) => b.score - a.score)[0];
+  const best = scored.sort((a, b) => b.score - a.score)[0];
   if (!best || best.score === 0) {
     return DEFAULT_TOPIC;
   }
 
   return best.topic;
+}
+
+function countHits(text, keywords, weight = 1) {
+  if (!keywords || keywords.length === 0) return 0;
+  return keywords.reduce((count, keyword) => (text.includes(keyword) ? count + weight : count), 0);
 }
 
 async function ensureRootFolder() {

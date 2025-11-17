@@ -3,7 +3,7 @@
 A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifies it into a topic-based folder, and stores rich metadata for quick reference. The popup lets you explore all smart folders and open sites directly.
 
 ## Features
-- **One-click smart bookmark:** Saves the active tab, detects its topic via title/URL/page metadata, and files it into a matching folder (creates folders automatically under a Smart Bookmarks root).
+- **One-click smart bookmark:** Saves the active tab, detects its topic via title/URL/page metadata, and files it into a matching folder (creates folders automatically under a Smart Bookmarks root). The classifier blends keyword, title, and domain signals to avoid lumping everything into one bucket.
 - **Metadata capture:** Stores domain, description/OG data, keyword hints, and a text snippet for at-a-glance context.
 - **Folder explorer:** Popup lists all smart folders and lets you open bookmarked sites directly.
 - **Lightweight heuristics:** No external APIs required; categorization runs locally using keyword matching.
@@ -41,12 +41,12 @@ If you want to see the smart-folder and metadata flow without loading Chrome, ru
 node scripts/simulate.js
 ```
 
-It classifies four sample tabs, prints their stored metadata, and shows the resulting Smart Bookmarks tree in the console.
+It classifies six sample tabs (including finance and Arabic faith content), prints their stored metadata, and shows the resulting Smart Bookmarks tree in the console.
 
 ## How smart bookmarking works
 - When you click **“Smart bookmark this tab”**, the popup asks the background service worker to:
   1. Capture page metadata (title, URL, meta description/keywords, OG tags, and a short text snippet) via an injected script.
-  2. Score the page against a keyword map (Technology, Business, Education, Entertainment, News, Design, Science, Shopping, Travel, Sports) and fall back to **Unsorted** if no clear match exists.
+  2. Score the page against a weighted keyword map (technology, finance/banking, business/work, education/learning, entertainment/media, news/politics, design/creative, science/health, shopping/reviews, travel/places, sports/fitness, faith/spirituality) using title and domain cues, and fall back to **Unsorted** if no clear match exists.
   3. Ensure a **Smart Bookmarks** root folder and a child folder for the detected topic; create them if they don’t exist.
   4. Create (or reuse) the bookmark, then persist a metadata record in `chrome.storage.local` keyed by the bookmark ID.
 - The popup’s folder explorer loads the Smart Bookmarks tree with stored metadata so you can open items directly.

@@ -11,6 +11,14 @@ const metadataDomain = document.getElementById('metadata-domain');
 const metadataDate = document.getElementById('metadata-date');
 const metadataDescription = document.getElementById('metadata-description');
 const metadataSnippet = document.getElementById('metadata-snippet');
+const metadataTags = document.getElementById('metadata-tags');
+const folderEditor = document.getElementById('folder-editor');
+const folderSelect = document.getElementById('folder-select');
+const moveFolderButton = document.getElementById('move-folder');
+
+let latestTree = null;
+let lastSavedBookmarkId = null;
+let lastSavedTopic = null;
 
 saveButton.addEventListener('click', async () => {
   toggleLoading(true);
@@ -21,10 +29,13 @@ saveButton.addEventListener('click', async () => {
   if (response?.error) {
     setStatus(response.error, 'error');
   } else {
+    lastSavedBookmarkId = response.bookmarkId;
+    lastSavedTopic = response.topic;
     const metadata = await chrome.runtime.sendMessage({ type: 'GET_METADATA', bookmarkId: response.bookmarkId });
     displayMetadata(metadata);
     setStatus(`Saved to ${response.topic}`, 'success');
-    renderTree();
+    const tree = await renderTree();
+    setupFolderEditor(tree, response.topic);
   }
 
   toggleLoading(false);
@@ -32,6 +43,7 @@ saveButton.addEventListener('click', async () => {
 
 refreshButton.addEventListener('click', () => renderTree());
 seeAllButton.addEventListener('click', () => openManager());
+moveFolderButton.addEventListener('click', () => handleMove());
 
 renderTree();
 
@@ -52,6 +64,7 @@ function setStatus(message, tone = '') {
 function displayMetadata(metadata) {
   if (!metadata) {
     metadataCard.classList.add('hidden');
+    folderEditor.classList.add('hidden');
     return;
   }
 
@@ -62,6 +75,24 @@ function displayMetadata(metadata) {
   metadataDate.textContent = new Date(metadata.savedAt).toLocaleString();
   metadataDescription.textContent = metadata.description || 'No description found';
   metadataSnippet.textContent = metadata.snippet || '';
+  renderTags(metadata.tags || []);
+}
+
+function renderTags(tags) {
+  if (!tags || tags.length === 0) {
+    metadataTags.classList.add('hidden');
+    metadataTags.innerHTML = '';
+    return;
+  }
+
+  metadataTags.classList.remove('hidden');
+  metadataTags.innerHTML = '';
+  tags.slice(0, 12).forEach((tag) => {
+    const chip = document.createElement('span');
+    chip.className = 'tag';
+    chip.textContent = tag;
+    metadataTags.appendChild(chip);
+  });
 }
 
 async function renderTree() {
@@ -75,14 +106,18 @@ async function renderTree() {
 
     if (!tree.children || tree.children.length === 0) {
       folderList.innerHTML = '<li class="muted">No smart bookmarks yet.</li>';
+      latestTree = tree;
       return;
     }
 
     folderList.innerHTML = '';
     tree.children.forEach((folder) => folderList.appendChild(renderFolder(folder)));
+    latestTree = tree;
+    return tree;
   } catch (error) {
     console.error('Failed to render tree', error);
     folderList.innerHTML = `<li class="muted">${error.message}</li>`;
+    latestTree = null;
   }
 }
 
@@ -113,6 +148,62 @@ function renderFolder(folder) {
 
   li.appendChild(links);
   return li;
+}
+
+function setupFolderEditor(tree, selectedTopic) {
+  if (!tree || !tree.children || tree.children.length === 0 || !lastSavedBookmarkId) {
+    folderEditor.classList.add('hidden');
+    return;
+  }
+
+  folderSelect.innerHTML = '';
+  tree.children.forEach((folder) => {
+    const option = document.createElement('option');
+    option.value = folder.id;
+    option.textContent = folder.title;
+    if (folder.title === selectedTopic) {
+      option.selected = true;
+    }
+    folderSelect.appendChild(option);
+  });
+
+  folderEditor.classList.remove('hidden');
+}
+
+async function handleMove() {
+  if (!lastSavedBookmarkId || !folderSelect.value) {
+    return;
+  }
+
+  toggleLoading(true);
+  const destinationFolderId = folderSelect.value;
+  const selectedTopic = folderSelect.options[folderSelect.selectedIndex]?.textContent || '';
+
+  try {
+    const response = await chrome.runtime.sendMessage({
+      type: 'MOVE_BOOKMARK',
+      bookmarkId: lastSavedBookmarkId,
+      destinationFolderId
+    });
+
+    if (response?.error) {
+      setStatus(response.error, 'error');
+      return;
+    }
+
+    lastSavedTopic = selectedTopic;
+    setStatus(`Moved to ${selectedTopic}`, 'success');
+    metadataTopic.textContent = selectedTopic;
+    const tree = await renderTree();
+    setupFolderEditor(tree, selectedTopic);
+    const metadata = await chrome.runtime.sendMessage({ type: 'GET_METADATA', bookmarkId: lastSavedBookmarkId });
+    displayMetadata(metadata);
+  } catch (error) {
+    console.error('Failed to move bookmark', error);
+    setStatus('Unable to move the bookmark', 'error');
+  } finally {
+    toggleLoading(false);
+  }
 }
 
 function openUrl(url) {

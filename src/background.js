@@ -2,9 +2,26 @@ const SMART_ROOT_TITLE = 'Smart Bookmarks';
 const DEFAULT_TOPIC = 'Unsorted';
 const TOPIC_PROFILES = [
   {
+    name: 'Software Engineering',
+    keywords: [
+      'developer',
+      'software',
+      'programming',
+      'code',
+      'api',
+      'framework',
+      'cloud',
+      'engineering',
+      'systems',
+      'devops'
+    ],
+    strongKeywords: ['javascript', 'python', 'java', 'kubernetes', 'k8s', 'docker', 'ci/cd', 'deployment', 'interview', 'system design'],
+    domainKeywords: ['dev', 'github', 'gitlab', 'stack', 'tech']
+  },
+  {
     name: 'Technology',
-    keywords: ['tech', 'developer', 'software', 'programming', 'code', 'api', 'framework', 'cloud', 'ai', 'engineering'],
-    strongKeywords: ['javascript', 'python', 'hardware', 'device', 'laptop', 'chip'],
+    keywords: ['tech', 'hardware', 'device', 'gadget', 'electronics', 'api', 'framework', 'ai'],
+    strongKeywords: ['laptop', 'chip', 'smartphone', 'headphones', 'wearable'],
     domainKeywords: ['dev', 'github', 'gitlab', 'stack', 'tech']
   },
   {
@@ -76,6 +93,21 @@ const TOPIC_PROFILES = [
 ];
 
 const SMART_ROOT_ID_KEY = 'smartRootId';
+const TAG_HINTS = {
+  kubernetes: ['kubernetes', 'k8s'],
+  docker: ['docker', 'container'],
+  deployment: ['deploy', 'deployment', 'release'],
+  interview: ['interview', 'interviews'],
+  podcast: ['podcast'],
+  youtube: ['youtube'],
+  cloud: ['cloud', 'aws', 'gcp', 'azure'],
+  devops: ['devops', 'ci/cd', 'pipeline'],
+  banking: ['bank', 'banking', 'finance', 'fintech'],
+  faith: ['quran', 'bible', 'prayer', 'dua', 'اذكار', 'أذكار', 'إسلام', 'islam'],
+  entertainment: ['music', 'movie', 'film', 'tv', 'show', 'playlist'],
+  research: ['research', 'study'],
+  travel: ['travel', 'trip', 'flight', 'hotel']
+};
 
 chrome.runtime.onInstalled.addListener(() => {
   ensureRootFolder();
@@ -129,15 +161,16 @@ async function handleSmartBookmark() {
 
   const pageMetadata = await collectPageMetadata(tab.id);
   const topic = chooseTopic(pageMetadata, tab);
+  const tags = deriveTags(pageMetadata, tab, topic);
   const rootId = await ensureRootFolder();
   const topicFolderId = await ensureTopicFolder(topic, rootId);
 
   const existingId = await findExistingBookmark(tab.url, topicFolderId);
   const bookmarkId = existingId || (await createBookmark(tab, topicFolderId));
 
-  await storeMetadata(bookmarkId, topic, pageMetadata, tab.url, tab.title);
+  await storeMetadata(bookmarkId, topic, pageMetadata, tab.url, tab.title, tags);
 
-  return { topic, bookmarkId };
+  return { topic, bookmarkId, tags };
 }
 
 async function collectPageMetadata(tabId) {
@@ -166,19 +199,30 @@ async function collectPageMetadata(tabId) {
 }
 
 function chooseTopic(pageMetadata, tab) {
-  const text = `${tab.title} ${tab.url} ${pageMetadata.description} ${pageMetadata.keywords} ${pageMetadata.ogTitle} ${pageMetadata.snippet}`.toLowerCase();
-  const domain = new URL(tab.url).hostname.replace(/www\./, '').toLowerCase();
+  const url = new URL(tab.url);
+  const domain = url.hostname.replace(/www\./, '').toLowerCase();
+  const pathText = url.pathname.replace(/[^a-z0-9]+/gi, ' ').toLowerCase();
+  const baseSignals = {
+    keywords: (pageMetadata.keywords || '').toLowerCase(),
+    description: (pageMetadata.description || '').toLowerCase(),
+    ogTitle: (pageMetadata.ogTitle || '').toLowerCase(),
+    snippet: (pageMetadata.snippet || '').toLowerCase(),
+    title: (tab.title || '').toLowerCase(),
+    path: pathText,
+    domain
+  };
 
   const scored = TOPIC_PROFILES.map((profile) => {
-    const baseHits = countHits(text, profile.keywords);
-    const strongHits = countHits(text, profile.strongKeywords || [], 2);
-    const domainHits = countHits(domain, profile.domainKeywords || [], 3);
-    const titleHits = countHits((tab.title || '').toLowerCase(), profile.strongKeywords || [], 2);
+    const score =
+      scoreText(baseSignals.keywords, profile, 4) +
+      scoreText(baseSignals.description, profile, 3) +
+      scoreText(baseSignals.ogTitle, profile, 3) +
+      scoreText(baseSignals.snippet, profile, 2) +
+      scoreText(baseSignals.path, profile, 2) +
+      scoreText(baseSignals.title, profile, 1) +
+      scoreDomain(baseSignals.domain, profile);
 
-    return {
-      topic: profile.name,
-      score: baseHits + strongHits + domainHits + titleHits
-    };
+    return { topic: profile.name, score };
   });
 
   const best = scored.sort((a, b) => b.score - a.score)[0];
@@ -189,9 +233,43 @@ function chooseTopic(pageMetadata, tab) {
   return best.topic;
 }
 
+function scoreText(text, profile, weight) {
+  if (!text) return 0;
+  return (
+    countHits(text, profile.keywords, weight) +
+    countHits(text, profile.strongKeywords || [], weight * 2)
+  );
+}
+
+function scoreDomain(domain, profile) {
+  if (!domain || !profile.domainKeywords) return 0;
+  // Keep a lower weighting on domain hits so metadata drives the topic choice.
+  return countHits(domain, profile.domainKeywords, 0.8);
+}
+
 function countHits(text, keywords, weight = 1) {
-  if (!keywords || keywords.length === 0) return 0;
+  if (!keywords || keywords.length === 0 || !text) return 0;
   return keywords.reduce((count, keyword) => (text.includes(keyword) ? count + weight : count), 0);
+}
+
+function deriveTags(pageMetadata, tab, topic) {
+  const collectedText = `${tab.title} ${tab.url} ${pageMetadata.description} ${pageMetadata.keywords} ${pageMetadata.ogTitle} ${pageMetadata.snippet}`
+    .toLowerCase();
+
+  const tags = new Set();
+
+  Object.entries(TAG_HINTS).forEach(([tag, keywords]) => {
+    const matched = keywords.some((keyword) => collectedText.includes(keyword.toLowerCase()));
+    if (matched) {
+      tags.add(tag);
+    }
+  });
+
+  if (topic && topic !== DEFAULT_TOPIC) {
+    tags.add(topic.toLowerCase());
+  }
+
+  return Array.from(tags);
 }
 
 async function ensureRootFolder() {
@@ -254,7 +332,11 @@ async function createBookmark(tab, parentId) {
   return bookmark.id;
 }
 
-async function storeMetadata(bookmarkId, topic, pageMetadata, url, title) {
+async function storeMetadata(bookmarkId, topic, pageMetadata, url, title, tags = []) {
+  const existing = await chrome.storage.local.get('smartMetadata');
+  const allMetadata = existing.smartMetadata || {};
+  const previous = allMetadata[bookmarkId] || {};
+
   const metadata = {
     id: bookmarkId,
     topic,
@@ -263,14 +345,12 @@ async function storeMetadata(bookmarkId, topic, pageMetadata, url, title) {
     description: pageMetadata.description || pageMetadata.snippet,
     snippet: pageMetadata.snippet,
     keywords: pageMetadata.keywords,
-    savedAt: new Date().toISOString(),
+    savedAt: previous.savedAt || new Date().toISOString(),
     domain: new URL(url).hostname,
-    notes: '',
-    tags: []
+    notes: previous.notes || '',
+    tags: tags.length > 0 ? tags : previous.tags || []
   };
 
-  const existing = await chrome.storage.local.get('smartMetadata');
-  const allMetadata = existing.smartMetadata || {};
   allMetadata[bookmarkId] = metadata;
   await chrome.storage.local.set({ smartMetadata: allMetadata });
 }

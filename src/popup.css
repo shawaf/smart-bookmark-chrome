@@ -158,6 +158,54 @@ button.ghost {
   color: #66737d;
 }
 
+.tag-row {
+  margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tag {
+  background: #eef2ff;
+  color: #3730a3;
+  border: 1px solid #cbd5e1;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+}
+
+.folder-editor {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.select-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+select {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid #d2d6dc;
+  background: #f8fafc;
+  font-weight: 600;
+}
+
+label {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.hint {
+  margin-top: 4px;
+  font-size: 12px;
+}
+
 .hidden {
   display: none;
 }

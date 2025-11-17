@@ -97,6 +97,20 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'UPDATE_BOOKMARK' && request.bookmarkId) {
+    updateBookmark(request.bookmarkId, request.updates)
+      .then(sendResponse)
+      .catch((error) => sendResponse({ error: error.message }));
+    return true;
+  }
+
+  if (request.type === 'DELETE_NODE' && request.nodeId) {
+    deleteNode(request.nodeId)
+      .then(sendResponse)
+      .catch((error) => sendResponse({ error: error.message }));
+    return true;
+  }
+
   return false;
 });
 
@@ -227,7 +241,9 @@ async function storeMetadata(bookmarkId, topic, pageMetadata, url, title) {
     snippet: pageMetadata.snippet,
     keywords: pageMetadata.keywords,
     savedAt: new Date().toISOString(),
-    domain: new URL(url).hostname
+    domain: new URL(url).hostname,
+    notes: '',
+    tags: []
   };
 
   const existing = await chrome.storage.local.get('smartMetadata');
@@ -265,4 +281,73 @@ function enrichTree(node, metadataMap) {
   }
 
   return item;
+}
+
+async function updateBookmark(bookmarkId, updates = {}) {
+  const metadataMap = await chrome.storage.local.get('smartMetadata');
+  const stored = metadataMap.smartMetadata || {};
+  const [bookmarkNode] = await chrome.bookmarks.get(bookmarkId);
+
+  if (updates.title || updates.url) {
+    await chrome.bookmarks.update(bookmarkId, {
+      title: updates.title,
+      url: updates.url
+    });
+  }
+
+  if (!stored[bookmarkId]) {
+    stored[bookmarkId] = {
+      id: bookmarkId,
+      topic: DEFAULT_TOPIC,
+      url: bookmarkNode.url,
+      title: bookmarkNode.title,
+      description: '',
+      snippet: '',
+      keywords: '',
+      savedAt: new Date().toISOString(),
+      domain: bookmarkNode.url ? new URL(bookmarkNode.url).hostname : '',
+      notes: '',
+      tags: []
+    };
+  }
+
+  stored[bookmarkId] = {
+    ...stored[bookmarkId],
+    ...('notes' in updates ? { notes: updates.notes } : {}),
+    ...('tags' in updates ? { tags: updates.tags } : {}),
+    ...('description' in updates ? { description: updates.description } : {}),
+    ...('title' in updates ? { title: updates.title } : {})
+  };
+  await chrome.storage.local.set({ smartMetadata: stored });
+
+  return { ok: true };
+}
+
+async function deleteNode(nodeId) {
+  const rootId = await ensureRootFolder();
+  if (nodeId === rootId) {
+    throw new Error('Cannot delete the smart bookmarks root folder');
+  }
+
+  const metadataMap = await chrome.storage.local.get('smartMetadata');
+  const stored = metadataMap.smartMetadata || {};
+
+  const [target] = await chrome.bookmarks.getSubTree(nodeId);
+
+  if (target.children && target.children.length > 0) {
+    await chrome.bookmarks.removeTree(nodeId);
+    removeMetadataForBranch(target, stored);
+  } else {
+    await chrome.bookmarks.remove(nodeId);
+    delete stored[nodeId];
+  }
+
+  await chrome.storage.local.set({ smartMetadata: stored });
+  return { ok: true };
+}
+
+function removeMetadataForBranch(node, metadataMap) {
+  delete metadataMap[node.id];
+  if (!node.children) return;
+  node.children.forEach((child) => removeMetadataForBranch(child, metadataMap));
 }

@@ -2,6 +2,7 @@ const saveButton = document.getElementById('save-button');
 const statusEl = document.getElementById('status');
 const folderList = document.getElementById('folder-list');
 const refreshButton = document.getElementById('refresh-tree');
+const seeAllButton = document.getElementById('see-all');
 
 const metadataCard = document.getElementById('metadata-card');
 const metadataTopic = document.getElementById('metadata-topic');
@@ -30,6 +31,7 @@ saveButton.addEventListener('click', async () => {
 });
 
 refreshButton.addEventListener('click', () => renderTree());
+seeAllButton.addEventListener('click', () => openManager());
 
 renderTree();
 
@@ -104,5 +106,10 @@ function renderFolder(folder) {
 }
 
 function openUrl(url) {
+  chrome.tabs.create({ url });
+}
+
+function openManager() {
+  const url = chrome.runtime.getURL('src/manage.html');
   chrome.tabs.create({ url });
 }

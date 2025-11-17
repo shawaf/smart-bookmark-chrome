@@ -28,7 +28,7 @@
     "128": "assets/icon128.png"
   },
   "options_ui": {
-    "page": "src/popup.html",
-    "open_in_tab": false
+    "page": "src/manage.html",
+    "open_in_tab": true
   }
 }

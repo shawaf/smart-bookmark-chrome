@@ -111,6 +111,11 @@ button.ghost {
   justify-content: space-between;
 }
 
+.tree-actions {
+  display: flex;
+  gap: 8px;
+}
+
 #folder-list {
   list-style: none;
   margin: 10px 0 0;

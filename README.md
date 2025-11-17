@@ -1,11 +1,12 @@
 # Smart Bookmark Organizer (Chrome Extension)
 
-A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifies it into a topic-based folder, and stores rich metadata for quick reference. The popup lets you explore all smart folders and open sites directly.
+A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifies it into a topic-based folder, and stores rich metadata for quick reference. The popup lets you explore all smart folders and open sites directly, and a full-page manager lets you edit or clean up bookmarks with extra notes/tags.
 
 ## Features
 - **One-click smart bookmark:** Saves the active tab, detects its topic via title/URL/page metadata, and files it into a matching folder (creates folders automatically under a Smart Bookmarks root). The classifier blends keyword, title, and domain signals to avoid lumping everything into one bucket.
 - **Metadata capture:** Stores domain, description/OG data, keyword hints, and a text snippet for at-a-glance context.
 - **Folder explorer:** Popup lists all smart folders and lets you open bookmarked sites directly.
+- **Full manager page:** A “See all” link opens a tab that shows every smart folder with controls to edit titles, add notes/tags, or delete bookmarks/folders.
 - **Lightweight heuristics:** No external APIs required; categorization runs locally using keyword matching.
 
 ## Project structure
@@ -15,6 +16,9 @@ src/background.js         # Service worker for bookmarking, categorization, and 
 src/popup.html            # Popup UI
 src/popup.css             # Popup styling
 src/popup.js              # Popup logic (save + folder explorer)
+src/manage.html           # Full-page manager for editing/deleting bookmarks and metadata
+src/manage.css            # Manager styling
+src/manage.js             # Manager interactions and background calls
 scripts/generate-icons.js # Recreates extension icons locally (keeps repository text-only)
 assets/                   # Icon output lives here after running the generator
 ```
@@ -33,6 +37,7 @@ This creates `assets/icon16.png`, `assets/icon48.png`, and `assets/icon128.png` 
 2. Enable **Developer mode** (top-right toggle).
 3. Click **Load unpacked** and select this repository folder.
 4. Pin the extension to the toolbar for quick access.
+5. From the popup, use **See all** to open the full manager page (or open it via the extension’s Options link) where you can edit bookmark titles, add notes/tags, or delete items/folders.
 
 ## Quick console simulation
 If you want to see the smart-folder and metadata flow without loading Chrome, run the Node-based simulator:

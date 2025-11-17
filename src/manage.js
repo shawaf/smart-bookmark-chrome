@@ -11,10 +11,9 @@ backToPopup.addEventListener('click', () => {
 if (!chrome?.runtime?.sendMessage) {
   setStatus('Chrome extension APIs are unavailable in this preview. Load the extension to manage bookmarks.', 'error');
   refreshButton.disabled = true;
-  return;
+} else {
+  loadTree();
 }
-
-loadTree();
 
 async function loadTree() {
   setStatus('Loading folders…', '');

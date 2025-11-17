@@ -18,17 +18,28 @@ loadTree();
 
 async function loadTree() {
   setStatus('Loading folders…', '');
-  const tree = await chrome.runtime.sendMessage({ type: 'GET_TREE' });
-  if (!tree || !tree.children || tree.children.length === 0) {
-    setStatus('No smart bookmarks yet. Save a tab to get started.', '');
+
+  try {
+    const tree = await chrome.runtime.sendMessage({ type: 'GET_TREE' });
+    if (!tree || tree.error) {
+      throw new Error(tree?.error || 'Unknown error loading bookmarks');
+    }
+
+    if (!tree.children || tree.children.length === 0) {
+      setStatus('No smart bookmarks yet. Save a tab to get started.', '');
+      foldersContainer.innerHTML = '';
+      return;
+    }
+
+    setStatus(`Found ${tree.children.length} folders`, 'success');
     foldersContainer.innerHTML = '';
-    return;
+
+    tree.children.forEach((folder) => foldersContainer.appendChild(renderFolder(folder)));
+  } catch (error) {
+    console.error('Failed to load smart bookmarks', error);
+    setStatus(`Could not load bookmarks: ${error.message}`, 'error');
+    foldersContainer.innerHTML = '';
   }
-
-  setStatus(`Found ${tree.children.length} folders`, 'success');
-  foldersContainer.innerHTML = '';
-
-  tree.children.forEach((folder) => foldersContainer.appendChild(renderFolder(folder)));
 }
 
 function setStatus(message, tone = '') {

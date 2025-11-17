@@ -190,14 +190,30 @@ function countHits(text, keywords, weight = 1) {
 async function ensureRootFolder() {
   const cached = await chrome.storage.local.get(SMART_ROOT_ID_KEY);
   if (cached[SMART_ROOT_ID_KEY]) {
-    return cached[SMART_ROOT_ID_KEY];
+    try {
+      const [existing] = await chrome.bookmarks.get(cached[SMART_ROOT_ID_KEY]);
+      if (existing) {
+        return existing.id;
+      }
+    } catch (error) {
+      await chrome.storage.local.remove(SMART_ROOT_ID_KEY);
+    }
   }
 
   const matches = await chrome.bookmarks.search({ title: SMART_ROOT_TITLE });
-  const existing = matches.find((item) => item.title === SMART_ROOT_TITLE && !item.url);
-  if (existing) {
-    await chrome.storage.local.set({ [SMART_ROOT_ID_KEY]: existing.id });
-    return existing.id;
+  const folders = matches.filter((item) => item.title === SMART_ROOT_TITLE && !item.url);
+
+  if (folders.length > 0) {
+    const withCounts = await Promise.all(
+      folders.map(async (folder) => ({
+        folder,
+        childCount: (await chrome.bookmarks.getChildren(folder.id)).length
+      }))
+    );
+
+    const best = withCounts.sort((a, b) => b.childCount - a.childCount)[0].folder;
+    await chrome.storage.local.set({ [SMART_ROOT_ID_KEY]: best.id });
+    return best.id;
   }
 
   const created = await chrome.bookmarks.create({ title: SMART_ROOT_TITLE });

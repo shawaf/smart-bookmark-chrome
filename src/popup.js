@@ -66,14 +66,24 @@ function displayMetadata(metadata) {
 
 async function renderTree() {
   folderList.innerHTML = '<li class="muted">Loading tree…</li>';
-  const tree = await chrome.runtime.sendMessage({ type: 'GET_TREE' });
-  if (!tree || tree.children.length === 0) {
-    folderList.innerHTML = '<li class="muted">No smart bookmarks yet.</li>';
-    return;
-  }
 
-  folderList.innerHTML = '';
-  tree.children.forEach((folder) => folderList.appendChild(renderFolder(folder)));
+  try {
+    const tree = await chrome.runtime.sendMessage({ type: 'GET_TREE' });
+    if (!tree || tree.error) {
+      throw new Error(tree?.error || 'Unknown error loading bookmarks');
+    }
+
+    if (!tree.children || tree.children.length === 0) {
+      folderList.innerHTML = '<li class="muted">No smart bookmarks yet.</li>';
+      return;
+    }
+
+    folderList.innerHTML = '';
+    tree.children.forEach((folder) => folderList.appendChild(renderFolder(folder)));
+  } catch (error) {
+    console.error('Failed to render tree', error);
+    folderList.innerHTML = `<li class="muted">${error.message}</li>`;
+  }
 }
 
 function renderFolder(folder) {

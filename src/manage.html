@@ -32,9 +32,12 @@
             <p class="muted domain"></p>
           </div>
           <div class="bookmark-actions">
-            <button class="ghost open">Open</button>
-            <button class="ghost edit">Edit</button>
-            <button class="danger delete">Delete</button>
+            <button class="ghost menu-toggle" aria-expanded="false">Actions ▾</button>
+            <div class="action-menu hidden" role="menu">
+              <button class="ghost open" role="menuitem">Open</button>
+              <button class="ghost edit" role="menuitem">Edit</button>
+              <button class="danger delete" role="menuitem">Delete</button>
+            </div>
           </div>
         </div>
         <p class="muted description"></p>

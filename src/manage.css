@@ -106,6 +106,7 @@ h1 {
   cursor: grab;
   user-select: none;
   -webkit-user-drag: element;
+  width: 100%;
 }
 
 .bookmark > * {
@@ -120,7 +121,7 @@ h1 {
 
 .bookmark-head {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: flex-start;
   gap: 12px;
 }
@@ -134,31 +135,54 @@ h1 {
 }
 
 .bookmark-actions {
+  position: relative;
   display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: nowrap;
+  justify-content: flex-end;
 }
 
-.bookmark-actions button {
-  flex: 0 0 auto;
-  white-space: nowrap;
+.bookmark-actions .menu-toggle {
   padding: 6px 10px;
+  white-space: nowrap;
+}
+
+.action-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  padding: 6px;
+  z-index: 2;
+  gap: 6px;
+}
+
+.action-menu button {
+  justify-content: flex-start;
+  text-align: left;
+  padding: 8px 10px;
 }
 
 h3.title {
   margin: 0 0 4px;
   font-size: 16px;
+  word-break: break-word;
 }
 
 .domain {
   margin: 0;
+  word-break: break-word;
 }
 
 .notes,
 .tags {
   margin: 0;
   color: #0f172a;
+  word-break: break-word;
 }
 
 .tags::before {
@@ -169,6 +193,7 @@ h3.title {
 
 .bookmark .description {
   margin: 0;
+  word-break: break-word;
 }
 
 button {

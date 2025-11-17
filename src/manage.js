@@ -94,6 +94,8 @@ function renderBookmark(node, topic, allFolders) {
   const topicEl = clone.querySelector('.topic');
   const notesEl = clone.querySelector('.notes');
   const tagsEl = clone.querySelector('.tags');
+  const menuToggle = clone.querySelector('.menu-toggle');
+  const actionMenu = clone.querySelector('.action-menu');
   const openBtn = clone.querySelector('.open');
   const editBtn = clone.querySelector('.edit');
   const deleteBtn = clone.querySelector('.delete');
@@ -115,8 +117,41 @@ function renderBookmark(node, topic, allFolders) {
   notesEl.textContent = metadata.notes ? `Notes: ${metadata.notes}` : '';
   tagsEl.textContent = tags.length > 0 ? tags.join(', ') : '';
 
-  openBtn.addEventListener('click', () => chrome.tabs.create({ url: node.url }));
+  const closeMenu = () => {
+    actionMenu.classList.add('hidden');
+    menuToggle.setAttribute('aria-expanded', 'false');
+  };
+
+  const openMenu = () => {
+    actionMenu.classList.remove('hidden');
+    menuToggle.setAttribute('aria-expanded', 'true');
+  };
+
+  const handleOutsideClick = (event) => {
+    if (!actionMenu.contains(event.target) && event.target !== menuToggle) {
+      closeMenu();
+      document.removeEventListener('click', handleOutsideClick);
+    }
+  };
+
+  menuToggle.addEventListener('click', (event) => {
+    event.stopPropagation();
+    const isOpen = !actionMenu.classList.contains('hidden');
+    if (isOpen) {
+      closeMenu();
+      document.removeEventListener('click', handleOutsideClick);
+    } else {
+      openMenu();
+      document.addEventListener('click', handleOutsideClick);
+    }
+  });
+
+  openBtn.addEventListener('click', () => {
+    closeMenu();
+    chrome.tabs.create({ url: node.url });
+  });
   deleteBtn.addEventListener('click', async () => {
+    closeMenu();
     if (confirm('Delete this bookmark?')) {
       await chrome.runtime.sendMessage({ type: 'DELETE_NODE', nodeId: node.id });
       loadTree();
@@ -124,6 +159,7 @@ function renderBookmark(node, topic, allFolders) {
   });
 
   editBtn.addEventListener('click', () => {
+    closeMenu();
     populateForm(form, node, metadata, allFolders);
     form.classList.remove('hidden');
   });

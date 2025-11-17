@@ -22,6 +22,16 @@ header {
   margin-bottom: 24px;
 }
 
+.drag-note {
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ecfeff;
+  color: #0369a1;
+  border: 1px dashed #38bdf8;
+  font-weight: 700;
+}
+
 h1 {
   margin: 0 0 8px;
 }
@@ -276,16 +286,7 @@ button:disabled {
 .folder-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
-}
-
-.folder-actions .drop-hint {
-  background: #ecfeff;
-  color: #0369a1;
-  padding: 6px 10px;
-  border-radius: 20px;
-  font-weight: 700;
-  border: 1px dashed #38bdf8;
+  gap: 6px;
 }
 
 .folder-card.drop-ready {
@@ -299,4 +300,15 @@ button:disabled {
 
 .bookmark.dragging {
   opacity: 0.65;
+}
+
+.icon-button {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
 }

@@ -21,6 +21,8 @@
 
     <section id="status" class="status muted">Loading folders…</section>
 
+    <section id="drag-note" class="drag-note muted">Drag a bookmark card onto any folder to move it.</section>
+
     <section id="folders" class="grid"></section>
 
     <template id="bookmark-template">
@@ -85,8 +87,13 @@
             <p class="muted folder-count"></p>
           </div>
           <div class="folder-actions">
-            <span class="drop-hint">Drop here to move</span>
-            <button class="ghost delete-folder">Delete folder</button>
+            <button
+              class="ghost icon-button delete-folder"
+              aria-label="Delete folder"
+              title="Delete folder"
+            >
+              🗑
+            </button>
           </div>
         </header>
         <div class="bookmarks"></div>

@@ -117,11 +117,20 @@ h1 {
   display: flex;
   justify-content: space-between;
   gap: 8px;
+  align-items: flex-start;
 }
 
 .bookmark-actions {
   display: flex;
   gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+.bookmark-actions button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+  padding: 6px 10px;
 }
 
 h3.title {

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Bookmark Manager</title>
+    <link rel="stylesheet" href="manage.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">Smart Bookmark Organizer</p>
+        <h1>All folders & tabs</h1>
+        <p class="subtitle">Manage every smart bookmark, edit notes, or clean up folders in one view.</p>
+      </div>
+      <div class="actions">
+        <button id="refresh">Refresh</button>
+        <button id="back-to-popup" class="ghost">Open popup</button>
+      </div>
+    </header>
+
+    <section id="status" class="status muted">Loading folders…</section>
+
+    <section id="folders" class="grid"></section>
+
+    <template id="bookmark-template">
+      <article class="bookmark">
+        <div class="bookmark-head">
+          <div class="bookmark-meta">
+            <p class="eyebrow topic"></p>
+            <h3 class="title"></h3>
+            <p class="muted domain"></p>
+          </div>
+          <div class="bookmark-actions">
+            <button class="ghost menu-toggle" aria-expanded="false">Actions ▾</button>
+            <div class="action-menu hidden" role="menu">
+              <button class="ghost open" role="menuitem">Open</button>
+              <button class="ghost edit" role="menuitem">Edit</button>
+              <button class="danger delete" role="menuitem">Delete</button>
+            </div>
+          </div>
+        </div>
+        <p class="muted description"></p>
+        <p class="notes"></p>
+        <p class="tags"></p>
+
+        <form class="edit-form hidden">
+          <label>
+            Title
+            <input name="title" type="text" />
+          </label>
+          <label>
+            Folder
+            <select name="folder"></select>
+          </label>
+          <label>
+            Notes
+            <textarea name="notes" rows="2" placeholder="Add context for future you"></textarea>
+          </label>
+          <label>
+            Tags (comma separated)
+            <input name="tags" type="text" placeholder="project, quick-read" />
+          </label>
+          <div class="form-actions">
+            <button type="submit">Save changes</button>
+            <button type="button" class="ghost cancel">Cancel</button>
+          </div>
+        </form>
+      </article>
+    </template>
+
+    <template id="folder-template">
+      <section class="folder-card">
+        <header>
+          <div>
+            <p class="eyebrow">Folder</p>
+            <h2 class="folder-title"></h2>
+            <p class="muted folder-count"></p>
+          </div>
+          <div class="folder-actions">
+            <span class="drop-hint">Drop here to move</span>
+            <button class="ghost delete-folder">Delete folder</button>
+          </div>
+        </header>
+        <div class="bookmarks"></div>
+      </section>
+    </template>
+
+    <script src="manage.js"></script>
+  </body>
+</html>

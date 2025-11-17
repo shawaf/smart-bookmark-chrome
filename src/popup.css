@@ -1,0 +1,172 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  margin: 0;
+  padding: 16px;
+  width: 420px;
+  color: #1f2933;
+  background: #f7f9fb;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+h1 {
+  margin: 4px 0;
+  font-size: 20px;
+}
+
+h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+p {
+  margin: 4px 0;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 11px;
+  font-weight: 700;
+  color: #4f46e5;
+  margin: 0;
+}
+
+.subtitle {
+  color: #52616b;
+  margin: 0;
+}
+
+button {
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #6366f1, #7c3aed);
+  color: white;
+  font-weight: 700;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.25);
+}
+
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 28px rgba(124, 58, 237, 0.25);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+button.ghost {
+  background: transparent;
+  border: 1px solid #d2d6dc;
+  color: #1f2933;
+  box-shadow: none;
+}
+
+.status {
+  padding: 10px 12px;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.card {
+  margin-top: 12px;
+  padding: 12px;
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tree {
+  margin-top: 18px;
+}
+
+.tree-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#folder-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.folder {
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: white;
+  border: 1px solid #e5e7eb;
+  margin-bottom: 8px;
+}
+
+.folder h3 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.folder ul {
+  list-style: disc;
+  margin: 4px 0 0 18px;
+  padding: 0;
+  color: #334155;
+}
+
+.folder li {
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.folder li:hover {
+  text-decoration: underline;
+}
+
+.muted {
+  color: #66737d;
+}
+
+.hidden {
+  display: none;
+}
+
+time {
+  color: #52616b;
+  font-size: 12px;
+}
+
+a {
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}

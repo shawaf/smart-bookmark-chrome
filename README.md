@@ -7,6 +7,7 @@ A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifie
 - **Metadata capture:** Stores domain, description/OG data, keyword hints, and a text snippet for at-a-glance context.
 - **Folder explorer:** Popup lists all smart folders and lets you open bookmarked sites directly.
 - **Full manager page:** A “See all” link opens a tab that shows every smart folder with controls to edit titles, add notes/tags, or delete bookmarks/folders.
+- **Drag-and-drop organizer:** Grid-based manager handles lots of folders at once, lets you drag bookmarks onto any folder to move them, or pick a new folder while editing metadata.
 - **Lightweight heuristics:** No external APIs required; categorization runs locally using keyword matching.
 
 ## Project structure
@@ -37,7 +38,7 @@ This creates `assets/icon16.png`, `assets/icon48.png`, and `assets/icon128.png` 
 2. Enable **Developer mode** (top-right toggle).
 3. Click **Load unpacked** and select this repository folder.
 4. Pin the extension to the toolbar for quick access.
-5. From the popup, use **See all** to open the full manager page (or open it via the extension’s Options link) where you can edit bookmark titles, add notes/tags, or delete items/folders.
+5. From the popup, use **See all** to open the full manager page (or open it via the extension’s Options link) where you can edit bookmark titles, add notes/tags, move items to another folder (drag cards or pick a folder in Edit), or delete items/folders.
 
 ## Quick console simulation
 If you want to see the smart-folder and metadata flow without loading Chrome, run the Node-based simulator:

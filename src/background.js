@@ -111,6 +111,13 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'MOVE_BOOKMARK' && request.bookmarkId && request.destinationFolderId) {
+    moveBookmark(request.bookmarkId, request.destinationFolderId)
+      .then(sendResponse)
+      .catch((error) => sendResponse({ error: error.message }));
+    return true;
+  }
+
   return false;
 });
 
@@ -283,17 +290,18 @@ async function getSmartTree() {
   return enriched;
 }
 
-function enrichTree(node, metadataMap) {
+function enrichTree(node, metadataMap, parentId = null) {
   const item = {
     id: node.id,
     title: node.title,
     url: node.url,
+    parentId,
     children: [],
     metadata: metadataMap[node.id] || null
   };
 
   if (node.children) {
-    item.children = node.children.map((child) => enrichTree(child, metadataMap));
+    item.children = node.children.map((child) => enrichTree(child, metadataMap, node.id));
   }
 
   return item;
@@ -335,6 +343,29 @@ async function updateBookmark(bookmarkId, updates = {}) {
     ...('title' in updates ? { title: updates.title } : {})
   };
   await chrome.storage.local.set({ smartMetadata: stored });
+
+  return { ok: true };
+}
+
+async function moveBookmark(bookmarkId, destinationFolderId) {
+  const [destination] = await chrome.bookmarks.get(destinationFolderId);
+  if (!destination || destination.url) {
+    throw new Error('Destination must be a folder');
+  }
+
+  const [bookmark] = await chrome.bookmarks.get(bookmarkId);
+  if (!bookmark || bookmark.url === undefined) {
+    throw new Error('Only bookmarks can be moved');
+  }
+
+  await chrome.bookmarks.move(bookmarkId, { parentId: destinationFolderId });
+
+  const metadataMap = await chrome.storage.local.get('smartMetadata');
+  const stored = metadataMap.smartMetadata || {};
+  if (stored[bookmarkId]) {
+    stored[bookmarkId].topic = destination.title || stored[bookmarkId].topic || DEFAULT_TOPIC;
+    await chrome.storage.local.set({ smartMetadata: stored });
+  }
 
   return { ok: true };
 }

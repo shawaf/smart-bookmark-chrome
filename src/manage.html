@@ -47,6 +47,10 @@
             <input name="title" type="text" />
           </label>
           <label>
+            Folder
+            <select name="folder"></select>
+          </label>
+          <label>
             Notes
             <textarea name="notes" rows="2" placeholder="Add context for future you"></textarea>
           </label>
@@ -68,8 +72,12 @@
           <div>
             <p class="eyebrow">Folder</p>
             <h2 class="folder-title"></h2>
+            <p class="muted folder-count"></p>
           </div>
-          <button class="ghost delete-folder">Delete folder</button>
+          <div class="folder-actions">
+            <span class="drop-hint">Drop here to move</span>
+            <button class="ghost delete-folder">Delete folder</button>
+          </div>
         </header>
         <div class="bookmarks"></div>
       </section>

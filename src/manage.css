@@ -59,8 +59,10 @@ h1 {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-auto-rows: 1fr;
+  gap: 18px;
+  align-items: start;
 }
 
 .folder-card {
@@ -72,6 +74,7 @@ h1 {
   flex-direction: column;
   gap: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  min-height: 220px;
 }
 
 .folder-card header {
@@ -85,6 +88,12 @@ h1 {
   margin: 0;
 }
 
+.bookmarks {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .bookmark {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
@@ -93,6 +102,7 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  cursor: grab;
 }
 
 .bookmark-head {
@@ -200,4 +210,32 @@ button:disabled {
 .empty {
   color: #94a3b8;
   font-style: italic;
+}
+
+.folder-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.folder-actions .drop-hint {
+  background: #ecfeff;
+  color: #0369a1;
+  padding: 6px 10px;
+  border-radius: 20px;
+  font-weight: 700;
+  border: 1px dashed #38bdf8;
+}
+
+.folder-card.drop-ready {
+  border-color: #0ea5e9;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.15);
+}
+
+.folder-count {
+  margin: 4px 0 0;
+}
+
+.bookmark.dragging {
+  opacity: 0.65;
 }

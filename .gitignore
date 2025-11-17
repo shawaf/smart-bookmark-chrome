@@ -1,0 +1,5 @@
+# Generated extension icons (kept text-only in repo)
+assets/icon*.png
+
+# Dependency directories
+node_modules/

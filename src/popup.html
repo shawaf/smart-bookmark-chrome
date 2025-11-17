@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Bookmarks</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <div>
+        <p class="eyebrow">Smart Bookmark Organizer</p>
+        <h1>Save, sort, and explore</h1>
+        <p class="subtitle">Bookmarks are auto-grouped by topic with quick metadata.</p>
+      </div>
+      <button id="save-button">Smart bookmark this tab</button>
+    </header>
+
+    <section id="status" class="status muted">Ready to create a smart bookmark.</section>
+
+    <section id="metadata-card" class="card hidden">
+      <div class="card-head">
+        <div>
+          <p class="eyebrow" id="metadata-topic"></p>
+          <h2 id="metadata-title"></h2>
+          <p class="muted" id="metadata-domain"></p>
+        </div>
+        <time id="metadata-date"></time>
+      </div>
+      <p id="metadata-description" class="muted"></p>
+      <p id="metadata-snippet"></p>
+      <div id="metadata-tags" class="tag-row hidden"></div>
+
+      <div id="folder-editor" class="folder-editor hidden">
+        <div class="field">
+          <label for="folder-select">Auto-selected folder</label>
+          <div class="select-row">
+            <select id="folder-select"></select>
+            <button id="move-folder" class="ghost">Update</button>
+          </div>
+          <p class="muted hint">We used the page metadata to pick a folder. Adjust if it looks off.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="tree">
+      <div class="tree-head">
+        <h2>All smart folders</h2>
+        <div class="tree-actions">
+          <button id="see-all" class="ghost">See all</button>
+          <button id="refresh-tree" class="ghost">Refresh</button>
+        </div>
+      </div>
+      <ul id="folder-list"></ul>
+    </section>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

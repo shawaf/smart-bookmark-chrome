@@ -2,27 +2,133 @@ const SMART_ROOT_TITLE = 'Smart Bookmarks';
 const DEFAULT_TOPIC = 'Unsorted';
 const TOPIC_PROFILES = [
   {
-    name: 'Software Engineering',
-    keywords: [
-      'developer',
-      'software',
-      'programming',
-      'code',
-      'api',
-      'framework',
-      'cloud',
-      'engineering',
-      'systems',
-      'devops'
+    name: 'React & Frontend Engineering',
+    keywords: ['frontend', 'front-end', 'ui', 'component', 'spa', 'web app', 'client', 'hooks'],
+    strongKeywords: [
+      'react',
+      'nextjs',
+      'next.js',
+      'jsx',
+      'redux',
+      'tailwind',
+      'vite',
+      'webpack',
+      'storybook',
+      'router'
     ],
-    strongKeywords: ['javascript', 'python', 'java', 'kubernetes', 'k8s', 'docker', 'ci/cd', 'deployment', 'interview', 'system design'],
+    domainKeywords: ['reactjs', 'nextjs', 'vercel', 'vitejs', 'tailwindcss']
+  },
+  {
+    name: 'Backend & APIs',
+    keywords: ['backend', 'server', 'api', 'graphql', 'rest', 'microservice', 'crud', 'auth', 'database', 'sql', 'queue'],
+    strongKeywords: [
+      'express',
+      'nestjs',
+      'fastapi',
+      'django',
+      'flask',
+      'spring',
+      'rails',
+      'laravel',
+      'kafka',
+      'rabbitmq',
+      'postgres',
+      'mysql',
+      'redis',
+      'serverless',
+      'lambda'
+    ],
+    domainKeywords: ['api', 'backend', 'server', 'postgres', 'mysql', 'supabase', 'railway', 'render', 'heroku']
+  },
+  {
+    name: 'Software Engineering Interviews',
+    keywords: ['interview', 'system design', 'coding challenge', 'behavioral', 'leetcode', 'faang', 'dsa', 'algorithm'],
+    strongKeywords: ['mock interview', 'whiteboard', 'big o', 'data structures', 'interviewer'],
+    domainKeywords: ['leetcode', 'pramp', 'interviewing', 'glassdoor']
+  },
+  {
+    name: 'DevOps & Delivery',
+    keywords: ['devops', 'ci', 'cd', 'pipeline', 'deployment', 'release', 'automation', 'infrastructure', 'observability', 'monitoring'],
+    strongKeywords: [
+      'kubernetes',
+      'k8s',
+      'docker',
+      'terraform',
+      'ansible',
+      'helm',
+      'argo',
+      'github actions',
+      'jenkins',
+      'circleci',
+      'prometheus',
+      'grafana',
+      'sre'
+    ],
+    domainKeywords: ['kubernetes', 'docker', 'terraform', 'jenkins', 'argo', 'prometheus', 'grafana', 'circleci']
+  },
+  {
+    name: 'Software Engineering (General)',
+    keywords: ['developer', 'software', 'programming', 'code', 'cloud', 'engineering', 'systems'],
+    strongKeywords: ['javascript', 'python', 'java', 'architecture'],
     domainKeywords: ['dev', 'github', 'gitlab', 'stack', 'tech']
   },
   {
-    name: 'Technology',
-    keywords: ['tech', 'hardware', 'device', 'gadget', 'electronics', 'api', 'framework', 'ai'],
-    strongKeywords: ['laptop', 'chip', 'smartphone', 'headphones', 'wearable'],
-    domainKeywords: ['dev', 'github', 'gitlab', 'stack', 'tech']
+    name: 'Education: Language Learning',
+    keywords: [
+      'language learning',
+      'learn english',
+      'vocabulary',
+      'grammar',
+      'pronunciation',
+      'listening practice',
+      'spanish',
+      'arabic',
+      'french',
+      'german',
+      'japanese',
+      'korean'
+    ],
+    strongKeywords: ['ielts', 'toefl', 'duolingo english', 'flashcards', 'anki'],
+    domainKeywords: ['duolingo', 'babbel', 'memrise']
+  },
+  {
+    name: 'Education: Instructional Design & LMS',
+    keywords: [
+      'instructional design',
+      'curriculum',
+      'syllabus',
+      'lesson plan',
+      'assessment',
+      'grading',
+      'learning management',
+      'lms',
+      'course design',
+      'rubric',
+      'pedagogy'
+    ],
+    strongKeywords: ['scorm', 'canvas lms', 'moodle', 'blackboard', 'brightspace'],
+    domainKeywords: ['canvas', 'moodle', 'udemy', 'coursera']
+  },
+  {
+    name: 'Education: Business & Marketing Learning',
+    keywords: [
+      'marketing course',
+      'growth marketing',
+      'seo training',
+      'ads tutorial',
+      'copywriting course',
+      'digital marketing',
+      'campaign management',
+      'content strategy'
+    ],
+    strongKeywords: ['meta ads', 'google ads', 'hubspot academy', 'ahrefs', 'semrush'],
+    domainKeywords: ['hubspot', 'ahrefs', 'semrush', 'udemy', 'coursera']
+  },
+  {
+    name: 'Education & Learning',
+    keywords: ['course', 'tutorial', 'learn', 'university', 'school', 'research', 'study', 'lesson', 'guide'],
+    strongKeywords: ['how to', 'introduction', 'handbook', 'syllabus'],
+    domainKeywords: ['academy', 'edu', 'school', 'learn']
   },
   {
     name: 'Finance & Banking',
@@ -37,15 +143,9 @@ const TOPIC_PROFILES = [
     domainKeywords: ['business', 'corp', 'company']
   },
   {
-    name: 'Education & Learning',
-    keywords: ['course', 'tutorial', 'learn', 'university', 'school', 'research', 'study', 'lesson', 'guide'],
-    strongKeywords: ['how to', 'introduction', 'handbook', 'syllabus'],
-    domainKeywords: ['academy', 'edu', 'school', 'learn']
-  },
-  {
     name: 'Entertainment & Media',
     keywords: ['movie', 'music', 'game', 'tv', 'show', 'podcast', 'film', 'trailer', 'celebrity', 'youtube'],
-    strongKeywords: ['review', 'episode', 'season', 'playlist'],
+    strongKeywords: ['review', 'episode', 'season', 'playlist', 'livestream'],
     domainKeywords: ['youtube', 'spotify', 'netflix', 'hulu']
   },
   {
@@ -94,19 +194,29 @@ const TOPIC_PROFILES = [
 
 const SMART_ROOT_ID_KEY = 'smartRootId';
 const TAG_HINTS = {
+  react: ['react', 'jsx', 'hooks', 'redux'],
+  nextjs: ['nextjs', 'next.js', 'vercel'],
+  frontend: ['frontend', 'ui', 'component', 'tailwind', 'spa'],
+  backend: ['backend', 'server', 'api', 'graphql', 'rest'],
+  microservices: ['microservice', 'microservices'],
+  database: ['postgres', 'mysql', 'redis', 'database', 'sql', 'mongodb'],
   kubernetes: ['kubernetes', 'k8s'],
   docker: ['docker', 'container'],
   deployment: ['deploy', 'deployment', 'release'],
-  interview: ['interview', 'interviews'],
+  cicd: ['ci/cd', 'pipeline', 'github actions', 'jenkins', 'circleci'],
+  interview: ['interview', 'interviews', 'leetcode', 'system design', 'mock interview'],
   podcast: ['podcast'],
   youtube: ['youtube'],
   cloud: ['cloud', 'aws', 'gcp', 'azure'],
-  devops: ['devops', 'ci/cd', 'pipeline'],
+  devops: ['devops', 'sre'],
   banking: ['bank', 'banking', 'finance', 'fintech'],
   faith: ['quran', 'bible', 'prayer', 'dua', 'اذكار', 'أذكار', 'إسلام', 'islam'],
   entertainment: ['music', 'movie', 'film', 'tv', 'show', 'playlist'],
   research: ['research', 'study'],
-  travel: ['travel', 'trip', 'flight', 'hotel']
+  travel: ['travel', 'trip', 'flight', 'hotel'],
+  language: ['vocabulary', 'grammar', 'learn english', 'ielts', 'toefl'],
+  marketing: ['marketing', 'seo', 'growth', 'ads'],
+  lms: ['lms', 'canvas', 'moodle', 'course design']
 };
 
 chrome.runtime.onInstalled.addListener(() => {

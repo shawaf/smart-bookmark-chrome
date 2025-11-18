@@ -2,7 +2,58 @@ const statusEl = document.getElementById('status');
 const foldersContainer = document.getElementById('folders');
 const refreshButton = document.getElementById('refresh');
 const backToPopup = document.getElementById('back-to-popup');
+const folderFilter = document.getElementById('folder-filter');
+const folderSearch = document.getElementById('folder-search');
 let folderOptions = [];
+let currentTree = null;
+let currentFilterKey = 'all';
+let currentSearch = '';
+
+const FOLDER_FILTERS = [
+  { key: 'all', label: 'All folders', matcher: () => true },
+  {
+    key: 'software',
+    label: 'Software & Engineering',
+    matcher: (title) =>
+      /engineer|frontend|backend|react|devops|api|code|software|interview|pipeline|microservice/.test(title)
+  },
+  {
+    key: 'education',
+    label: 'Learning & Education',
+    matcher: (title) => /education|learning|language|lms|course|tutorial|lesson|school|university/.test(title)
+  },
+  {
+    key: 'business',
+    label: 'Business & Marketing',
+    matcher: (title) => /business|startup|marketing|sales|product|growth|management|leadership/.test(title)
+  },
+  {
+    key: 'finance',
+    label: 'Finance & Banking',
+    matcher: (title) => /finance|bank|fintech|money|investment|trading|crypto/.test(title)
+  },
+  {
+    key: 'media',
+    label: 'Entertainment & Media',
+    matcher: (title) => /entertainment|media|podcast|music|film|youtube|game|show/.test(title)
+  },
+  {
+    key: 'lifestyle',
+    label: 'Lifestyle & Travel',
+    matcher: (title) => /travel|fitness|sport|shopping|health|science|design|faith/.test(title)
+  }
+];
+
+function initFilters() {
+  if (!folderFilter) return;
+  folderFilter.innerHTML = '';
+  FOLDER_FILTERS.forEach((filter) => {
+    const option = document.createElement('option');
+    option.value = filter.key;
+    option.textContent = filter.label;
+    folderFilter.appendChild(option);
+  });
+}
 
 refreshButton.addEventListener('click', loadTree);
 backToPopup.addEventListener('click', () => {
@@ -13,6 +64,15 @@ if (!chrome?.runtime?.sendMessage) {
   setStatus('Chrome extension APIs are unavailable in this preview. Load the extension to manage bookmarks.', 'error');
   refreshButton.disabled = true;
 } else {
+  initFilters();
+  folderFilter.addEventListener('change', () => {
+    currentFilterKey = folderFilter.value;
+    renderFoldersFromState();
+  });
+  folderSearch.addEventListener('input', (event) => {
+    currentSearch = event.target.value.toLowerCase();
+    renderFoldersFromState();
+  });
   loadTree();
 }
 
@@ -31,17 +91,48 @@ async function loadTree() {
       return;
     }
 
+    currentTree = tree;
     folderOptions = flattenFolders(tree.children || []);
-
-    setStatus(`Found ${tree.children.length} folders. Drag a bookmark card onto any folder to move it.`, 'success');
-    foldersContainer.innerHTML = '';
-
-    tree.children.forEach((folder) => foldersContainer.appendChild(renderFolder(folder, folderOptions)));
+    renderFoldersFromState();
   } catch (error) {
     console.error('Failed to load smart bookmarks', error);
     setStatus(`Could not load bookmarks: ${error.message}`, 'error');
     foldersContainer.innerHTML = '';
   }
+}
+
+function renderFoldersFromState() {
+  if (!currentTree) return;
+
+  const total = currentTree.children?.length || 0;
+  const filtered = (currentTree.children || []).filter((folder) =>
+    matchesFilter(folder.title, currentFilterKey) && matchesSearch(folder.title, currentSearch)
+  );
+
+  if (filtered.length === 0) {
+    setStatus('No folders match this filter yet. Try another filter or clear the search.', '');
+    foldersContainer.innerHTML = '';
+    return;
+  }
+
+  setStatus(
+    `Showing ${filtered.length} of ${total} folders. Drag a bookmark card onto any folder to move it.`,
+    'success'
+  );
+  foldersContainer.innerHTML = '';
+  filtered.forEach((folder) => foldersContainer.appendChild(renderFolder(folder, folderOptions)));
+}
+
+function matchesFilter(title, filterKey) {
+  const normalized = (title || '').toLowerCase();
+  const filter = FOLDER_FILTERS.find((item) => item.key === filterKey);
+  if (!filter) return true;
+  return filter.matcher(normalized);
+}
+
+function matchesSearch(title, term) {
+  if (!term) return true;
+  return (title || '').toLowerCase().includes(term);
 }
 
 function setStatus(message, tone = '') {

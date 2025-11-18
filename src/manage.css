@@ -22,6 +22,32 @@ header {
   margin-bottom: 24px;
 }
 
+.toolbar {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.toolbar .filter {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 200px;
+}
+
+.toolbar select,
+.toolbar input[type='search'] {
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #ffffff;
+}
+
 .drag-note {
   margin: 0 0 16px;
   padding: 10px 12px;

@@ -28,7 +28,7 @@ assets/                   # Icon output lives here after running the generator
 ```
 
 ## Generate icons (text-only repo)
-The repository avoids committing binary assets. Before loading the extension, generate the PNG icons:
+The repository avoids committing binary assets. Before loading the extension, generate the PNG icons (now derived from the provided bookmark/brain/gear artwork):
 
 ```
 node scripts/generate-icons.js

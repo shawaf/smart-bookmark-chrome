@@ -2,6 +2,73 @@ const SMART_ROOT_TITLE = 'Smart Bookmarks';
 const DEFAULT_TOPIC = 'Unsorted';
 const TOPIC_PROFILES = [
   {
+    name: 'Data Structures & Algorithms',
+    keywords: [
+      'data structure',
+      'data structures',
+      'algorithm',
+      'algorithms',
+      'complexity',
+      'dynamic programming',
+      'graph',
+      'tree',
+      'sorting',
+      'searching',
+      'heap',
+      'stack',
+      'queue'
+    ],
+    strongKeywords: [
+      'dsa',
+      'leetcode',
+      'binary tree',
+      'trie',
+      'bfs',
+      'dfs',
+      'backtracking',
+      'time complexity',
+      'space complexity',
+      'big o'
+    ],
+    domainKeywords: ['leetcode', 'geeksforgeeks', 'hackerrank', 'codeforces', 'topcoder', 'codechef']
+  },
+  {
+    name: 'Software Architecture & Design',
+    keywords: [
+      'architecture',
+      'architect',
+      'design pattern',
+      'patterns',
+      'system design',
+      'microservices',
+      'event driven',
+      'domain driven',
+      'ddd',
+      'clean architecture',
+      'scalability',
+      'performance'
+    ],
+    strongKeywords: ['cqrs', 'event sourcing', 'hexagonal', 'onion architecture', 'saga', 'orchestration', 'choreography'],
+    domainKeywords: ['martinfowler', 'infoq', 'microservices', 'architecture']
+  },
+  {
+    name: 'Engineering Management & Leadership',
+    keywords: [
+      'engineering management',
+      'tech lead',
+      'leadership',
+      'staff engineer',
+      'principal engineer',
+      'team lead',
+      'org design',
+      'career ladder',
+      'mentoring',
+      'people management'
+    ],
+    strongKeywords: ['performance review', 'one-on-one', 'stakeholder', 'roadmap', 'strategy', 'execution'],
+    domainKeywords: ['leaddev', 'cto', 'vp engineering']
+  },
+  {
     name: 'React & Frontend Engineering',
     keywords: ['frontend', 'front-end', 'ui', 'component', 'spa', 'web app', 'client', 'hooks'],
     strongKeywords: [
@@ -68,7 +135,7 @@ const TOPIC_PROFILES = [
   },
   {
     name: 'Software Engineering (General)',
-    keywords: ['developer', 'software', 'programming', 'code', 'cloud', 'engineering', 'systems'],
+    keywords: ['developer', 'software', 'programming', 'code', 'cloud', 'engineering', 'systems', 'refactor', 'debug'],
     strongKeywords: ['javascript', 'python', 'java', 'architecture'],
     domainKeywords: ['dev', 'github', 'gitlab', 'stack', 'tech']
   },
@@ -193,10 +260,13 @@ const TOPIC_PROFILES = [
 ];
 
 const TAG_HINTS = {
+  architecture: ['architecture', 'system design', 'microservices', 'design pattern', 'ddd', 'cqrs', 'event sourcing'],
   react: ['react', 'jsx', 'hooks', 'redux'],
   nextjs: ['nextjs', 'next.js', 'vercel'],
   frontend: ['frontend', 'ui', 'component', 'tailwind', 'spa'],
   backend: ['backend', 'server', 'api', 'graphql', 'rest'],
+  testing: ['testing', 'qa', 'unit test', 'integration test', 'e2e', 'jest', 'cypress', 'playwright'],
+  leadership: ['leadership', 'management', 'strategy', 'staff engineer', 'principal engineer', 'roadmap'],
   microservices: ['microservice', 'microservices'],
   database: ['postgres', 'mysql', 'redis', 'database', 'sql', 'mongodb'],
   kubernetes: ['kubernetes', 'k8s'],
@@ -215,7 +285,11 @@ const TAG_HINTS = {
   travel: ['travel', 'trip', 'flight', 'hotel'],
   language: ['vocabulary', 'grammar', 'learn english', 'ielts', 'toefl'],
   marketing: ['marketing', 'seo', 'growth', 'ads'],
-  lms: ['lms', 'canvas', 'moodle', 'course design']
+  lms: ['lms', 'canvas', 'moodle', 'course design'],
+  dsa: ['data structure', 'algorithm', 'leetcode', 'graph', 'tree', 'sorting', 'searching'],
+  course: ['udemy', 'coursera', 'almentor', 'edx', 'udacity', 'skillshare', 'pluralsight', 'linkedin learning'],
+  tutorial: ['playlist', 'tutorial', 'walkthrough', 'crash course', 'how to', 'guide'],
+  interview_prep: ['interview prep', 'mock interview', 'behavioral', 'system design']
 };
 
 function chooseTopic(pageMetadata, tab) {
@@ -283,6 +357,33 @@ function deriveTags(pageMetadata, tab, topic) {
 
   if (topic && topic !== DEFAULT_TOPIC) {
     tags.add(topic.toLowerCase());
+  }
+
+  try {
+    const url = new URL(tab.url);
+    const domain = url.hostname.replace(/www\./, '').toLowerCase();
+    const path = url.pathname.toLowerCase();
+    const isCourseDomain =
+      domain.includes('udemy') ||
+      domain.includes('coursera') ||
+      domain.includes('edx') ||
+      domain.includes('udacity') ||
+      domain.includes('almentor') ||
+      domain.includes('skillshare') ||
+      domain.includes('pluralsight') ||
+      domain.includes('linkedin') ||
+      domain.includes('classroom');
+
+    if (isCourseDomain || collectedText.includes('course') || collectedText.includes('curriculum')) {
+      tags.add('course');
+    }
+
+    const isPlaylist = path.includes('playlist') || url.searchParams?.has('list');
+    if (isPlaylist || collectedText.includes('tutorial') || collectedText.includes('walkthrough')) {
+      tags.add('tutorial');
+    }
+  } catch (error) {
+    // Ignore URL parse failures in simulation tagging.
   }
 
   return Array.from(tags);
@@ -400,6 +501,26 @@ const sampleTabs = [
       keywords: 'banking, account, online banking, payments',
       ogTitle: 'Open an account',
       snippet: 'Apply for a new checking account, manage payments, and connect your debit card.'
+    }
+  },
+  {
+    title: 'Ultimate Data Structures & Algorithms in Python',
+    url: 'https://leetcode.com/explore/learn/card/data-structure',
+    pageMetadata: {
+      description: 'Master trees, graphs, dynamic programming, sorting, and Big-O complexity analysis.',
+      keywords: 'data structures, algorithms, dsa, complexity, graph, tree, dynamic programming',
+      ogTitle: 'LeetCode Data Structures & Algorithms',
+      snippet: 'Practice BFS, DFS, recursion, and heaps with hands-on algorithm challenges.'
+    }
+  },
+  {
+    title: 'React 18 Complete Guide (Udemy Course)',
+    url: 'https://www.udemy.com/course/react-complete-guide/',
+    pageMetadata: {
+      description: 'Full React course covering hooks, components, routing, and deployment with hands-on projects.',
+      keywords: 'react, course, udemy, hooks, routing, tutorial, frontend',
+      ogTitle: 'React 18 Complete Guide - Course',
+      snippet: 'Enroll to learn React, state management, and modern frontend patterns through a structured curriculum.'
     }
   },
   {

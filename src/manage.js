@@ -105,8 +105,8 @@ function renderFoldersFromState() {
   if (!currentTree) return;
 
   const total = currentTree.children?.length || 0;
-  const filtered = (currentTree.children || []).filter((folder) =>
-    matchesFilter(folder.title, currentFilterKey) && matchesSearch(folder.title, currentSearch)
+  const filtered = (currentTree.children || []).filter(
+    (folder) => matchesFilter(folder.title, currentFilterKey) && matchesSearch(folder, currentSearch)
   );
 
   if (filtered.length === 0) {
@@ -130,9 +130,35 @@ function matchesFilter(title, filterKey) {
   return filter.matcher(normalized);
 }
 
-function matchesSearch(title, term) {
+function matchesSearch(folder, term) {
   if (!term) return true;
-  return (title || '').toLowerCase().includes(term);
+
+  const normalized = term.toLowerCase();
+  const folderTitle = (folder.title || '').toLowerCase();
+  if (folderTitle.includes(normalized)) return true;
+
+  const children = folder.children || [];
+  return children.some((child) => bookmarkMatchesSearch(child, normalized));
+}
+
+function bookmarkMatchesSearch(node, term) {
+  if (!node.url) return false;
+  const metadata = node.metadata || {};
+  const haystack = [
+    node.title,
+    node.url,
+    metadata.description,
+    metadata.snippet,
+    metadata.keywords,
+    metadata.notes,
+    metadata.domain,
+    (metadata.tags || []).join(' ')
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return haystack.includes(term);
 }
 
 function setStatus(message, tone = '') {

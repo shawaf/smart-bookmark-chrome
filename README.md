@@ -9,7 +9,8 @@ A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifie
 - **Full manager page:** A “See all” link opens a tab that shows every smart folder with controls to edit titles, add notes/tags, or delete bookmarks/folders.
 - **Drag-and-drop organizer:** Grid-based manager handles lots of folders at once, lets you drag bookmarks onto any folder to move them, or pick a new folder while editing metadata.
 - **Lightweight heuristics:** No external APIs required; categorization runs locally using keyword matching, extra software-engineering/deployment terms, and URL-path cues.
-- **Fine-grained tech/learning folders:** Software items now land in focused folders such as **React & Frontend**, **Backend & APIs**, **DevOps & Delivery**, or **Engineering Interviews**; learning content splits into **Language Learning**, **Instructional Design/LMS**, and **Marketing Learning** when metadata supports it.
+- **Fine-grained tech/learning folders:** Software items now land in focused folders such as **React & Frontend**, **Backend & APIs**, **DevOps & Delivery**, **Data Structures & Algorithms**, **Architecture & Design**, or **Engineering Management**; learning content splits into **Language Learning**, **Instructional Design/LMS**, and **Marketing Learning** when metadata supports it.
+- **Metadata-aware search:** The manager search box checks folder titles plus bookmark titles, URLs, descriptions/snippets, notes, domains, and tags so you can find anything even inside large folders.
 - **Filter/search the manager:** Use the folder-type filter or search box on the manager page to quickly jump to a subset of folders when you have many.
 
 ## Project structure
@@ -54,9 +55,10 @@ It classifies sample tabs across finance, Arabic faith content, and multiple You
 ## How smart bookmarking works
 - When you click **“Smart bookmark this tab”**, the popup asks the background service worker to:
   1. Capture page metadata (title, URL, meta description/keywords, OG tags, and a short text snippet) via an injected script.
-  2. Score the page against a weighted keyword map (React/frontend, backend/APIs, DevOps/delivery, engineering interviews, general software, language learning, LMS/marketing courses, plus the existing finance/business/entertainment/news/design/science/shopping/travel/sports/faith profiles) using metadata/snippets first, URL-path cues second, and domain last, and fall back to **Unsorted** if no clear match exists.
-  3. Ensure a **Smart Bookmarks** root folder and a child folder for the detected topic; create them if they don’t exist.
-  4. Create (or reuse) the bookmark, then persist a metadata record in `chrome.storage.local` keyed by the bookmark ID.
+  2. Score the page against a weighted keyword map (React/frontend, backend/APIs, DevOps/delivery, data structures & algorithms, architecture/design, engineering management/leadership, engineering interviews, general software, language learning, LMS/marketing courses, plus the existing finance/business/entertainment/news/design/science/shopping/travel/sports/faith profiles) using metadata/snippets first, URL-path cues second, and domain last, and fall back to **Unsorted** if no clear match exists.
+  3. Derive tags (including **course** for sites like Udemy/Coursera/Almentor/edX/LinkedIn Learning and **tutorial** for playlists or walkthrough pages) alongside tech/topic hints.
+  4. Ensure a **Smart Bookmarks** root folder and a child folder for the detected topic; create them if they don’t exist.
+  5. Create (or reuse) the bookmark, then persist a metadata record in `chrome.storage.local` keyed by the bookmark ID.
 - The popup’s folder explorer loads the Smart Bookmarks tree with stored metadata so you can open items directly or change the auto-selected folder immediately after saving.
 
 ## Ready-to-deploy notes

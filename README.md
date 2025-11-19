@@ -28,20 +28,23 @@ assets/                   # Icon output lives here after running the generator
 ```
 
 ## Generate icons (text-only repo)
-The repository avoids committing binary assets. Before loading the extension, generate the PNG icons:
+The repository avoids committing binary assets, so icon PNGs are created locally. Running `npm install` (or the generator script directly) writes the toolbar assets derived from the provided artwork:
 
 ```
-node scripts/generate-icons.js
+npm install        # runs the postinstall hook
+# or
+npm run generate:icons
 ```
 
-This creates `assets/icon16.png`, `assets/icon48.png`, and `assets/icon128.png` so Chrome can display the toolbar/action icons.
+Either command creates `assets/icon16.png`, `assets/icon48.png`, and `assets/icon128.png` so Chrome can display the toolbar/action icons. Re-run the generator whenever you clean the repo or update the artwork.
 
 ## Running the extension locally
-1. Open **chrome://extensions** in Chrome.
-2. Enable **Developer mode** (top-right toggle).
-3. Click **Load unpacked** and select this repository folder.
-4. Pin the extension to the toolbar for quick access.
-5. From the popup, use **See all** to open the full manager page (or open it via the extension’s Options link) where you can edit bookmark titles, add notes/tags, move items to another folder (drag cards or pick a folder in Edit), or delete items/folders.
+1. Run `npm install` once so the icon generator can produce the PNGs.
+2. Open **chrome://extensions** in Chrome.
+3. Enable **Developer mode** (top-right toggle).
+4. Click **Load unpacked** and select this repository folder.
+5. Pin the extension to the toolbar for quick access.
+6. From the popup, use **See all** to open the full manager page (or open it via the extension’s Options link) where you can edit bookmark titles, add notes/tags, move items to another folder (drag cards or pick a folder in Edit), or delete items/folders.
 
 ## Quick console simulation
 If you want to see the smart-folder and metadata flow without loading Chrome, run the Node-based simulator:
@@ -62,7 +65,7 @@ It classifies sample tabs across finance, Arabic faith content, and multiple You
 - The popup’s folder explorer loads the Smart Bookmarks tree with stored metadata so you can open items directly or change the auto-selected folder immediately after saving.
 
 ## Ready-to-deploy notes
-- No build step is required; the extension runs directly from source (ensure you ran `node scripts/generate-icons.js` first).
+- No build step is required; the extension runs directly from source (ensure you ran `npm install` or `npm run generate:icons` first).
 - All logic stays client-side—no external services or credentials needed.
 
 ## Next steps to publish

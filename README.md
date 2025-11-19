@@ -23,12 +23,13 @@ src/popup.js              # Popup logic (save + folder explorer)
 src/manage.html           # Full-page manager for editing/deleting bookmarks and metadata
 src/manage.css            # Manager styling
 src/manage.js             # Manager interactions and background calls
+src/icon-base64.json      # Shared Base64 artwork used to paint the toolbar icon
 scripts/generate-icons.js # Recreates extension icons locally (keeps repository text-only)
 assets/                   # Icon output lives here after running the generator
 ```
 
-## Generate icons (text-only repo)
-The repository avoids committing binary assets, so icon PNGs are created locally. Running `npm install` (or the generator script directly) writes the toolbar assets derived from the provided artwork:
+## Optional: export PNG toolbar icons
+The toolbar icon now renders directly from the bundled Base64 artwork, so you can load the extension without generating any files. If you need standalone PNGs (for Chrome Web Store uploads or manual packaging), run:
 
 ```
 npm install        # runs the postinstall hook
@@ -36,10 +37,10 @@ npm install        # runs the postinstall hook
 npm run generate:icons
 ```
 
-Either command creates `assets/icon16.png`, `assets/icon48.png`, and `assets/icon128.png` so Chrome can display the toolbar/action icons. Re-run the generator whenever you clean the repo or update the artwork.
+The script emits `assets/icon16.png`, `assets/icon48.png`, and `assets/icon128.png` derived from the provided design while keeping the repo text-only.
 
 ## Running the extension locally
-1. Run `npm install` once so the icon generator can produce the PNGs.
+1. (Optional) Run `npm install` if you want to use the console simulator or export the PNG icons.
 2. Open **chrome://extensions** in Chrome.
 3. Enable **Developer mode** (top-right toggle).
 4. Click **Load unpacked** and select this repository folder.
@@ -65,7 +66,7 @@ It classifies sample tabs across finance, Arabic faith content, and multiple You
 - The popup’s folder explorer loads the Smart Bookmarks tree with stored metadata so you can open items directly or change the auto-selected folder immediately after saving.
 
 ## Ready-to-deploy notes
-- No build step is required; the extension runs directly from source (ensure you ran `npm install` or `npm run generate:icons` first).
+- No build step is required; the extension runs directly from source and paints its toolbar icon at runtime.
 - All logic stays client-side—no external services or credentials needed.
 
 ## Next steps to publish
@@ -73,7 +74,7 @@ It classifies sample tabs across finance, Arabic faith content, and multiple You
    - Load the unpacked extension and confirm bookmarking, topic folders, and metadata cards work as expected.
    - Test on a few sites across different categories to validate sorting heuristics.
 2. Prepare assets:
-   - Provide final icon artwork (16/48/128px) that meets Chrome Web Store guidelines.
+   - Run `npm run generate:icons` to export PNG artwork (16/48/128px) for Chrome Web Store guidelines or replace the Base64 data with your final icon design.
    - Capture screenshots of the popup and write a clear store listing description.
 3. Package the extension:
    - From the repository root, zip the contents (including `manifest.json`, `src`, and `assets`).

@@ -1,5 +1,7 @@
 const SMART_ROOT_TITLE = 'Smart Bookmarks';
 const DEFAULT_TOPIC = 'Unsorted';
+const ICON_DATA_PATH = 'src/icon-base64.json';
+const ICON_SIZES = [16, 48, 128];
 const TOPIC_PROFILES = [
   {
     name: 'Data Structures & Algorithms',
@@ -293,9 +295,165 @@ const TAG_HINTS = {
   interview_prep: ['interview prep', 'mock interview', 'behavioral', 'system design']
 };
 
+let iconDataCache = null;
+
+scheduleDynamicIconRefresh();
+
+if (chrome.runtime?.onStartup) {
+  chrome.runtime.onStartup.addListener(() => {
+    scheduleDynamicIconRefresh();
+  });
+}
+
 chrome.runtime.onInstalled.addListener(() => {
+  scheduleDynamicIconRefresh();
   ensureRootFolder();
 });
+
+function scheduleDynamicIconRefresh() {
+  const maybePromise = applyDynamicActionIcon();
+  if (maybePromise && typeof maybePromise.catch === 'function') {
+    maybePromise.catch((error) => console.warn('Failed to prepare action icon', error));
+  }
+}
+
+async function applyDynamicActionIcon() {
+  if (!chrome?.action?.setIcon) {
+    return null;
+  }
+
+  const imageDataMap = {};
+  const base64Map = await loadIconData();
+
+  for (const size of ICON_SIZES) {
+    let imageData = null;
+    if (base64Map && base64Map[String(size)]) {
+      imageData = await decodeBase64Icon(base64Map[String(size)], size);
+    }
+
+    if (!imageData) {
+      imageData = createFallbackIconImageData(size);
+    }
+
+    if (imageData) {
+      imageDataMap[size] = imageData;
+    }
+  }
+
+  if (!Object.keys(imageDataMap).length) {
+    return null;
+  }
+
+  const setIconResult = chrome.action.setIcon({ imageData: imageDataMap });
+  if (setIconResult && typeof setIconResult.catch === 'function') {
+    return setIconResult.catch((error) => console.warn('Unable to set action icon', error));
+  }
+
+  return null;
+}
+
+async function loadIconData() {
+  if (iconDataCache) {
+    return iconDataCache;
+  }
+
+  if (!chrome?.runtime?.getURL || typeof fetch === 'undefined') {
+    return null;
+  }
+
+  try {
+    const response = await fetch(chrome.runtime.getURL(ICON_DATA_PATH));
+    if (!response.ok) {
+      throw new Error(`Icon data request failed (${response.status})`);
+    }
+    iconDataCache = await response.json();
+    return iconDataCache;
+  } catch (error) {
+    console.warn('Failed to load icon base64 map', error);
+    iconDataCache = null;
+    return null;
+  }
+}
+
+async function decodeBase64Icon(base64, size) {
+  if (
+    typeof atob !== 'function' ||
+    typeof Blob === 'undefined' ||
+    typeof OffscreenCanvas === 'undefined' ||
+    typeof createImageBitmap === 'undefined'
+  ) {
+    return null;
+  }
+
+  try {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const blob = new Blob([bytes], { type: 'image/png' });
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(size, size);
+    const context = canvas.getContext('2d');
+    context.clearRect(0, 0, size, size);
+    context.drawImage(bitmap, 0, 0, size, size);
+    return context.getImageData(0, 0, size, size);
+  } catch (error) {
+    console.warn('Unable to decode icon image data', error);
+    return null;
+  }
+}
+
+function createFallbackIconImageData(size) {
+  if (typeof ImageData === 'undefined') {
+    return null;
+  }
+
+  const data = new Uint8ClampedArray(size * size * 4);
+  const topColor = [37, 99, 235];
+  const bottomColor = [147, 51, 234];
+  const accentColor = [255, 214, 102];
+  const bookmarkWidth = Math.round(size * 0.55);
+  const bookmarkStartX = Math.floor((size - bookmarkWidth) / 2);
+  const bookmarkTop = Math.round(size * 0.18);
+  const bookmarkBottom = Math.round(size * 0.78);
+  const tipHeight = Math.max(1, Math.round(size * 0.12));
+
+  for (let y = 0; y < size; y += 1) {
+    const t = size > 1 ? y / (size - 1) : 0;
+    const gradientColor = [
+      Math.round(topColor[0] + (bottomColor[0] - topColor[0]) * t),
+      Math.round(topColor[1] + (bottomColor[1] - topColor[1]) * t),
+      Math.round(topColor[2] + (bottomColor[2] - topColor[2]) * t)
+    ];
+
+    for (let x = 0; x < size; x += 1) {
+      const index = (y * size + x) * 4;
+      let pixel = gradientColor;
+
+      if (x >= bookmarkStartX && x < bookmarkStartX + bookmarkWidth && y >= bookmarkTop && y <= bookmarkBottom) {
+        pixel = accentColor;
+      }
+
+      if (y > bookmarkBottom && y <= bookmarkBottom + tipHeight) {
+        const relativeY = y - bookmarkBottom;
+        const shrink = Math.round((relativeY / tipHeight) * (bookmarkWidth / 2));
+        const tipStart = bookmarkStartX + shrink;
+        const tipEnd = bookmarkStartX + bookmarkWidth - shrink;
+        if (x >= tipStart && x < tipEnd) {
+          pixel = accentColor;
+        }
+      }
+
+      data[index] = pixel[0];
+      data[index + 1] = pixel[1];
+      data[index + 2] = pixel[2];
+      data[index + 3] = 255;
+    }
+  }
+
+  return new ImageData(data, size, size);
+}
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'SMART_BOOKMARK') {

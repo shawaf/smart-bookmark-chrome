@@ -5,11 +5,14 @@ const backToPopup = document.getElementById('back-to-popup');
 const folderFilter = document.getElementById('folder-filter');
 const folderSearch = document.getElementById('folder-search');
 const dateFilter = document.getElementById('date-filter');
+const themeToggle = document.getElementById('theme-toggle');
+const THEME_KEY = 'smartBookmarkTheme';
 let folderOptions = [];
 let currentTree = null;
 let currentFilterKey = 'all';
 let currentSearch = '';
 let currentDateFilter = '';
+let currentTheme = 'light';
 
 const FOLDER_FILTERS = [
   { key: 'all', label: 'All folders', matcher: () => true },
@@ -62,6 +65,8 @@ backToPopup.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('src/popup.html') });
 });
 
+initThemeToggle();
+
 if (!chrome?.runtime?.sendMessage) {
   setStatus('Chrome extension APIs are unavailable in this preview. Load the extension to manage bookmarks.', 'error');
   refreshButton.disabled = true;
@@ -80,6 +85,39 @@ if (!chrome?.runtime?.sendMessage) {
     renderFoldersFromState();
   });
   loadTree();
+}
+
+function initThemeToggle() {
+  if (!themeToggle) return;
+  const stored = localStorage.getItem(THEME_KEY);
+  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  currentTheme = stored === 'dark' || stored === 'light' ? stored : prefersDark ? 'dark' : 'light';
+  applyTheme(currentTheme);
+
+  themeToggle.addEventListener('click', () => {
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+    localStorage.setItem(THEME_KEY, nextTheme);
+  });
+
+  if (window.matchMedia) {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (event) => {
+      const userChoice = localStorage.getItem(THEME_KEY);
+      if (userChoice === 'dark' || userChoice === 'light') return;
+      applyTheme(event.matches ? 'dark' : 'light');
+    });
+  }
+}
+
+function applyTheme(theme) {
+  currentTheme = theme;
+  document.documentElement.classList.toggle('theme-dark', theme === 'dark');
+  document.documentElement.classList.toggle('theme-light', theme !== 'dark');
+  if (themeToggle) {
+    themeToggle.setAttribute('aria-pressed', theme === 'dark');
+    themeToggle.title = theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode';
+    themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+  }
 }
 
 async function loadTree() {
@@ -284,6 +322,7 @@ function renderBookmark(node, topic, allFolders) {
   card.dataset.bookmarkId = node.id;
   card.dataset.folderId = node.parentId || '';
   card.setAttribute('draggable', 'true');
+  let isDragging = false;
 
   titleEl.textContent = node.title || node.url;
   domainEl.textContent = metadata.domain || new URL(node.url).hostname;
@@ -297,6 +336,13 @@ function renderBookmark(node, topic, allFolders) {
   topicEl.textContent = topic;
   notesEl.textContent = metadata.notes ? `Notes: ${metadata.notes}` : '';
   tagsEl.textContent = tags.length > 0 ? tags.join(', ') : '';
+
+  card.addEventListener('click', (event) => {
+    if (isDragging) return;
+    const interactiveSelector = 'button, input, textarea, select, option, label, a, .action-menu, form';
+    if (event.target.closest(interactiveSelector)) return;
+    chrome.tabs.create({ url: node.url });
+  });
 
   const closeMenu = () => {
     actionMenu.classList.add('hidden');
@@ -351,6 +397,7 @@ function renderBookmark(node, topic, allFolders) {
   });
 
   card.addEventListener('dragstart', (event) => {
+    isDragging = true;
     card.classList.add('dragging');
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData(
@@ -360,6 +407,7 @@ function renderBookmark(node, topic, allFolders) {
   });
 
   card.addEventListener('dragend', () => {
+    isDragging = false;
     card.classList.remove('dragging');
   });
 

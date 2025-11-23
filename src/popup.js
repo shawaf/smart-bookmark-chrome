@@ -252,6 +252,12 @@ async function handleSaveReminder() {
     return;
   }
 
+  const hasPermission = await ensureNotificationPermission();
+  if (!hasPermission) {
+    setStatus('Enable notifications to receive reminders.', 'error');
+    return;
+  }
+
   const reminder = reminderInput.value;
   toggleLoading(true);
   try {
@@ -273,6 +279,24 @@ async function handleSaveReminder() {
     setStatus(error.message || 'Unable to save reminder', 'error');
   } finally {
     toggleLoading(false);
+  }
+}
+
+async function ensureNotificationPermission() {
+  if (typeof Notification === 'undefined' || Notification.permission === 'granted') {
+    return true;
+  }
+
+  if (Notification.permission === 'denied') {
+    return false;
+  }
+
+  try {
+    const result = await Notification.requestPermission();
+    return result === 'granted';
+  } catch (error) {
+    console.warn('Notification permission request failed', error);
+    return false;
   }
 }
 

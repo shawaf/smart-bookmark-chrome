@@ -563,10 +563,12 @@ function buildPalette(baseHex, seed) {
 
 function createPaletteFromHsl(h, s, l) {
   const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-  const primary = hslToHex(h, clamp(s, 45, 82), clamp(l, 32, 68));
-  const surface = hslToHex(h, clamp(s - 12, 28, 86), clamp(l + 22, 52, 94));
-  const border = hslToHex(h, clamp(s - 2, 35, 80), clamp(l - 14, 22, 70));
-  const text = l > 55 ? '#0f172a' : '#f8fafc';
+  const baseSat = clamp(s, 58, 88);
+  const baseLight = clamp(l, 40, 64);
+  const primary = hslToHex(h, baseSat, baseLight);
+  const surface = hslToHex(h, clamp(baseSat - 24, 24, 60), clamp(baseLight + 26, 64, 96));
+  const border = hslToHex((h + 8) % 360, clamp(baseSat - 10, 34, 74), clamp(baseLight + 6, 46, 78));
+  const text = baseLight > 55 ? '#0b1220' : '#f8fafc';
   return { primary, surface, border, text };
 }
 
@@ -874,6 +876,14 @@ chrome.notifications?.onClicked.addListener(async (notificationId) => {
 async function notifyReminder(metadata) {
   if (!chrome?.notifications?.create) {
     return;
+  }
+
+  if (chrome.notifications.getPermissionLevel) {
+    const level = await chrome.notifications.getPermissionLevel();
+    if (level !== 'granted') {
+      console.warn('Notifications permission is not granted; skipping reminder');
+      return;
+    }
   }
 
   const iconUrl = await getReminderIconUrl();

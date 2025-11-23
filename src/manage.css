@@ -39,7 +39,8 @@ header {
 }
 
 .toolbar select,
-.toolbar input[type='search'] {
+.toolbar input[type='search'],
+.toolbar input[type='date'] {
   border-radius: 10px;
   border: 1px solid #cbd5e1;
   padding: 10px 12px;
@@ -100,8 +101,12 @@ h1 {
 }
 
 .folder-card {
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  --folder-accent: #6366f1;
+  --folder-surface: #ffffff;
+  --folder-border: #e2e8f0;
+  --folder-text: #0f172a;
+  background: var(--folder-surface);
+  border: 1px solid var(--folder-border);
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -123,8 +128,29 @@ h1 {
   margin: 0;
 }
 
+.folder-heading {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  align-items: center;
+}
+
+.folder-color {
+  width: 14px;
+  height: 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.08);
+}
+
 .folder-card h2 {
   margin: 0;
+  color: var(--folder-text);
+}
+
+.folder-card .eyebrow,
+.folder-card .folder-count {
+  color: color-mix(in srgb, var(--folder-text) 60%, #94a3b8);
 }
 
 .bookmarks {
@@ -171,6 +197,12 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.bookmark .saved-time {
+  margin: 0;
+  font-size: 13px;
+  color: #475569;
 }
 
 .bookmark-actions {
@@ -324,8 +356,8 @@ button:disabled {
 }
 
 .folder-card.drop-ready {
-  border-color: #0ea5e9;
-  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.15);
+  border-color: var(--folder-accent);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--folder-accent) 25%, transparent);
 }
 
 .folder-count {

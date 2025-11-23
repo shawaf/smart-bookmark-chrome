@@ -2,6 +2,7 @@ const SMART_ROOT_TITLE = 'Smart Bookmarks';
 const DEFAULT_TOPIC = 'Unsorted';
 const ICON_DATA_PATH = 'src/icon-base64.json';
 const ICON_SIZES = [16, 48, 128];
+const FOLDER_COLORS_KEY = 'smartFolderColors';
 const TOPIC_PROFILES = [
   {
     name: 'Data Structures & Algorithms',
@@ -496,6 +497,119 @@ function blobToDataUrl(blob) {
   });
 }
 
+function hashString(input) {
+  return input
+    .split('')
+    .reduce((hash, char) => (Math.imul(31, hash) + char.charCodeAt(0)) >>> 0, 0);
+}
+
+function hslToHex(h, s, l) {
+  const normalizedS = Math.max(0, Math.min(100, s)) / 100;
+  const normalizedL = Math.max(0, Math.min(100, l)) / 100;
+  const a = normalizedS * Math.min(normalizedL, 1 - normalizedL);
+
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const color = normalizedL - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, '0');
+  };
+
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function hexToHsl(hex) {
+  const sanitized = hex.replace('#', '');
+  const bigint = parseInt(sanitized, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+
+  const rNorm = r / 255;
+  const gNorm = g / 255;
+  const bNorm = b / 255;
+  const max = Math.max(rNorm, gNorm, bNorm);
+  const min = Math.min(rNorm, gNorm, bNorm);
+  const delta = max - min;
+
+  let h = 0;
+  if (delta !== 0) {
+    if (max === rNorm) h = ((gNorm - bNorm) / delta) % 6;
+    else if (max === gNorm) h = (bNorm - rNorm) / delta + 2;
+    else h = (rNorm - gNorm) / delta + 4;
+    h = Math.round(h * 60);
+  }
+
+  if (h < 0) h += 360;
+  const l = (max + min) / 2;
+  const s = delta === 0 ? 0 : delta / (1 - Math.abs(2 * l - 1));
+
+  return { h, s: s * 100, l: l * 100 };
+}
+
+function buildPalette(baseHex, seed) {
+  if (baseHex && /^#?[0-9a-fA-F]{6}$/.test(baseHex.trim())) {
+    const { h, s, l } = hexToHsl(baseHex);
+    return createPaletteFromHsl(h, s, l);
+  }
+
+  const hash = hashString(seed || `${Date.now()}`);
+  const hue = (hash * 137.508) % 360;
+  const saturation = 62 + (hash % 18);
+  const lightness = 58 - (hash % 12);
+  return createPaletteFromHsl(hue, saturation, lightness);
+}
+
+function createPaletteFromHsl(h, s, l) {
+  const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+  const primary = hslToHex(h, clamp(s, 45, 82), clamp(l, 32, 68));
+  const surface = hslToHex(h, clamp(s - 12, 28, 86), clamp(l + 22, 52, 94));
+  const border = hslToHex(h, clamp(s - 2, 35, 80), clamp(l - 14, 22, 70));
+  const text = l > 55 ? '#0f172a' : '#f8fafc';
+  return { primary, surface, border, text };
+}
+
+async function ensureFolderColor(folderId, title, preferredHex) {
+  const stored = await chrome.storage.local.get(FOLDER_COLORS_KEY);
+  const existing = stored[FOLDER_COLORS_KEY] || {};
+  if (existing[folderId]) {
+    return existing[folderId];
+  }
+
+  const palette = buildPalette(preferredHex, `${title}-${folderId}`);
+  const updated = { ...existing, [folderId]: palette };
+  await chrome.storage.local.set({ [FOLDER_COLORS_KEY]: updated });
+  return palette;
+}
+
+async function ensureColorsForTree(rootNode) {
+  const stored = await chrome.storage.local.get(FOLDER_COLORS_KEY);
+  const colorMap = stored[FOLDER_COLORS_KEY] || {};
+  let updated = false;
+
+  function walk(node) {
+    if (!node.url) {
+      if (!colorMap[node.id]) {
+        colorMap[node.id] = buildPalette(null, `${node.title}-${node.id}`);
+        updated = true;
+      }
+    }
+
+    if (node.children) {
+      node.children.forEach(walk);
+    }
+  }
+
+  walk(rootNode);
+
+  if (updated) {
+    await chrome.storage.local.set({ [FOLDER_COLORS_KEY]: colorMap });
+  }
+
+  return colorMap;
+}
+
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   if (request.type === 'SMART_BOOKMARK') {
     handleSmartBookmark().then(sendResponse).catch((error) => sendResponse({ error: error.message }));
@@ -534,7 +648,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   }
 
   if (request.type === 'CREATE_FOLDER' && request.title) {
-    createCustomFolder(request.title)
+    createCustomFolder(request.title, request.color)
       .then(sendResponse)
       .catch((error) => sendResponse({ error: error.message }));
     return true;
@@ -816,24 +930,28 @@ async function ensureTopicFolder(topic, rootId) {
   const children = await chrome.bookmarks.getChildren(rootId);
   const existing = children.find((child) => child.title === topic && !child.url);
   if (existing) {
+    await ensureFolderColor(existing.id, existing.title);
     return existing.id;
   }
 
   const created = await chrome.bookmarks.create({ parentId: rootId, title: topic });
+  await ensureFolderColor(created.id, created.title);
   return created.id;
 }
 
-async function createCustomFolder(title) {
+async function createCustomFolder(title, preferredColor) {
   const safeTitle = title.trim() || DEFAULT_TOPIC;
   const rootId = await ensureRootFolder();
   const children = await chrome.bookmarks.getChildren(rootId);
   const existing = children.find((child) => child.title.toLowerCase() === safeTitle.toLowerCase() && !child.url);
   if (existing) {
-    return { folderId: existing.id, existed: true };
+    const palette = await ensureFolderColor(existing.id, existing.title, preferredColor);
+    return { folderId: existing.id, existed: true, color: palette };
   }
 
   const created = await chrome.bookmarks.create({ parentId: rootId, title: safeTitle });
-  return { folderId: created.id, existed: false };
+  const palette = await ensureFolderColor(created.id, created.title, preferredColor);
+  return { folderId: created.id, existed: false, color: palette };
 }
 
 async function findExistingBookmark(url, parentId) {
@@ -885,23 +1003,25 @@ async function getSmartTree() {
   const tree = await chrome.bookmarks.getSubTree(rootId);
   const stored = await chrome.storage.local.get('smartMetadata');
   const metadataMap = stored.smartMetadata || {};
+  const colorMap = await ensureColorsForTree(tree[0]);
 
-  const enriched = enrichTree(tree[0], metadataMap);
+  const enriched = enrichTree(tree[0], metadataMap, null, colorMap);
   return enriched;
 }
 
-function enrichTree(node, metadataMap, parentId = null) {
+function enrichTree(node, metadataMap, parentId = null, folderColors = {}) {
   const item = {
     id: node.id,
     title: node.title,
     url: node.url,
     parentId,
     children: [],
-    metadata: metadataMap[node.id] || null
+    metadata: metadataMap[node.id] || null,
+    color: !node.url ? folderColors[node.id] || null : null
   };
 
   if (node.children) {
-    item.children = node.children.map((child) => enrichTree(child, metadataMap, node.id));
+    item.children = node.children.map((child) => enrichTree(child, metadataMap, node.id, folderColors));
   }
 
   return item;
@@ -984,19 +1104,22 @@ async function deleteNode(nodeId) {
 
   const metadataMap = await chrome.storage.local.get('smartMetadata');
   const stored = metadataMap.smartMetadata || {};
+  const colorStored = await chrome.storage.local.get(FOLDER_COLORS_KEY);
+  const folderColors = colorStored[FOLDER_COLORS_KEY] || {};
 
   const [target] = await chrome.bookmarks.getSubTree(nodeId);
 
   if (target.children && target.children.length > 0) {
     await chrome.bookmarks.removeTree(nodeId);
     removeMetadataForBranch(target, stored);
+    removeColorsForBranch(target, folderColors);
   } else {
     await chrome.bookmarks.remove(nodeId);
     delete stored[nodeId];
     await clearReminderAlarm(nodeId);
   }
 
-  await chrome.storage.local.set({ smartMetadata: stored });
+  await chrome.storage.local.set({ smartMetadata: stored, [FOLDER_COLORS_KEY]: folderColors });
   return { ok: true };
 }
 
@@ -1005,6 +1128,16 @@ function removeMetadataForBranch(node, metadataMap) {
   clearReminderAlarm(node.id);
   if (!node.children) return;
   node.children.forEach((child) => removeMetadataForBranch(child, metadataMap));
+}
+
+function removeColorsForBranch(node, colorMap) {
+  if (!node.url) {
+    delete colorMap[node.id];
+  }
+
+  if (node.children) {
+    node.children.forEach((child) => removeColorsForBranch(child, colorMap));
+  }
 }
 
 function clearReminderAlarm(bookmarkId) {

@@ -14,6 +14,7 @@ const folderEditor = document.getElementById('folder-editor');
 const folderSelect = document.getElementById('folder-select');
 const moveFolderButton = document.getElementById('move-folder');
 const newFolderInput = document.getElementById('new-folder-name');
+const newFolderColor = document.getElementById('new-folder-color');
 const createFolderButton = document.getElementById('create-folder');
 const reminderInput = document.getElementById('reminder-input');
 const reminderText = document.getElementById('metadata-reminder');
@@ -22,6 +23,8 @@ const saveReminderButton = document.getElementById('save-reminder');
 let latestTree = null;
 let lastSavedBookmarkId = null;
 let lastSavedTopic = null;
+let manualFolderColor = false;
+newFolderColor.value = suggestColorFromSeed('Smart Bookmark');
 
 saveButton.addEventListener('click', async () => {
   toggleLoading(true);
@@ -48,6 +51,13 @@ dashboardButton.addEventListener('click', () => openManager());
 moveFolderButton.addEventListener('click', () => handleMove());
 createFolderButton.addEventListener('click', () => handleCreateFolder());
 saveReminderButton.addEventListener('click', () => handleSaveReminder());
+newFolderInput.addEventListener('input', () => {
+  if (manualFolderColor) return;
+  newFolderColor.value = suggestColorFromSeed(newFolderInput.value || 'Smart Bookmark');
+});
+newFolderColor.addEventListener('input', () => {
+  manualFolderColor = true;
+});
 
 getTree();
 
@@ -125,11 +135,20 @@ function setupFolderEditor(tree, selectedTopic) {
     return;
   }
 
+  manualFolderColor = false;
+  newFolderColor.value = suggestColorFromSeed(selectedTopic || 'Smart Bookmark');
+
   folderSelect.innerHTML = '';
   tree.children.forEach((folder) => {
     const option = document.createElement('option');
     option.value = folder.id;
     option.textContent = folder.title;
+    if (folder.color?.surface) {
+      option.style.backgroundColor = folder.color.surface;
+    }
+    if (folder.color?.text) {
+      option.style.color = folder.color.text;
+    }
     if (folder.title === selectedTopic) {
       option.selected = true;
     }
@@ -194,7 +213,12 @@ async function handleCreateFolder() {
 
   toggleLoading(true);
   try {
-    const createResponse = await chrome.runtime.sendMessage({ type: 'CREATE_FOLDER', title: name });
+    const preferredColor = manualFolderColor ? newFolderColor.value : '';
+    const createResponse = await chrome.runtime.sendMessage({
+      type: 'CREATE_FOLDER',
+      title: name,
+      color: preferredColor
+    });
     if (createResponse?.error || !createResponse?.folderId) {
       throw new Error(createResponse?.error || 'Unable to create folder');
     }
@@ -211,6 +235,9 @@ async function handleCreateFolder() {
     setupFolderEditor(tree, name);
     const metadata = await chrome.runtime.sendMessage({ type: 'GET_METADATA', bookmarkId: lastSavedBookmarkId });
     displayMetadata(metadata);
+    newFolderInput.value = '';
+    manualFolderColor = false;
+    newFolderColor.value = suggestColorFromSeed(lastSavedTopic || 'Smart Bookmark');
   } catch (error) {
     console.error('Failed to create folder', error);
     setStatus(error.message || 'Unable to create folder', 'error');
@@ -262,4 +289,34 @@ function formatForInput(dateString) {
   } catch (error) {
     return '';
   }
+}
+
+function suggestColorFromSeed(seed) {
+  const hash = hashString(seed || 'smart-folder');
+  const hue = (hash * 137.508) % 360;
+  const saturation = 62 + (hash % 18);
+  const lightness = 58 - (hash % 12);
+  return hslToHex(hue, saturation, lightness);
+}
+
+function hashString(input) {
+  return input
+    .split('')
+    .reduce((hash, char) => (Math.imul(31, hash) + char.charCodeAt(0)) >>> 0, 0);
+}
+
+function hslToHex(h, s, l) {
+  const normalizedS = Math.max(0, Math.min(100, s)) / 100;
+  const normalizedL = Math.max(0, Math.min(100, l)) / 100;
+  const a = normalizedS * Math.min(normalizedL, 1 - normalizedL);
+
+  const f = (n) => {
+    const k = (n + h / 30) % 12;
+    const color = normalizedL - a * Math.max(Math.min(k - 3, 9 - k, 1), -1);
+    return Math.round(255 * color)
+      .toString(16)
+      .padStart(2, '0');
+  };
+
+  return `#${f(0)}${f(8)}${f(4)}`;
 }

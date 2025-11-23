@@ -157,6 +157,16 @@ input[type='datetime-local'] {
   font-weight: 600;
 }
 
+input[type='color'] {
+  width: 46px;
+  height: 42px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid #d2d6dc;
+  background: #fff;
+  cursor: pointer;
+}
+
 label {
   display: block;
   font-weight: 700;

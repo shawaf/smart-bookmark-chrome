@@ -18,6 +18,8 @@
 
     <section id="status" class="status muted">Ready to create a smart bookmark.</section>
 
+    <button id="dashboard" class="dashboard">Dashboard</button>
+
     <section id="metadata-card" class="card hidden">
       <div class="card-head">
         <div>
@@ -30,6 +32,7 @@
       <p id="metadata-description" class="muted"></p>
       <p id="metadata-snippet"></p>
       <div id="metadata-tags" class="tag-row hidden"></div>
+      <p id="metadata-reminder" class="muted reminder"></p>
 
       <div id="folder-editor" class="folder-editor hidden">
         <div class="field">
@@ -40,18 +43,25 @@
           </div>
           <p class="muted hint">We used the page metadata to pick a folder. Adjust if it looks off.</p>
         </div>
-      </div>
-    </section>
 
-    <section class="tree">
-      <div class="tree-head">
-        <h2>All smart folders</h2>
-        <div class="tree-actions">
-          <button id="see-all" class="ghost">See all</button>
-          <button id="refresh-tree" class="ghost">Refresh</button>
+        <div class="field">
+          <label for="new-folder-name">Create a new folder</label>
+          <div class="select-row">
+            <input id="new-folder-name" type="text" placeholder="e.g., React Deep Dives" />
+            <button id="create-folder" class="ghost">Create &amp; move</button>
+          </div>
+          <p class="muted hint">Make a custom folder if the suggestion doesn't fit.</p>
+        </div>
+
+        <div class="field">
+          <label for="reminder-input">Reminder (optional)</label>
+          <div class="select-row">
+            <input id="reminder-input" type="datetime-local" />
+            <button id="save-reminder" class="ghost">Save reminder</button>
+          </div>
+          <p class="muted hint">Keep empty for no reminder.</p>
         </div>
       </div>
-      <ul id="folder-list"></ul>
     </section>
 
     <script src="popup.js"></script>

@@ -238,6 +238,11 @@ h3.title {
   word-break: break-word;
 }
 
+.bookmark .reminder {
+  margin: 4px 0;
+  word-break: break-word;
+}
+
 button {
   border: none;
   background: #0ea5e9;

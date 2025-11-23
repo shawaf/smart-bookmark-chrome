@@ -492,6 +492,13 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'CREATE_FOLDER' && request.title) {
+    createCustomFolder(request.title)
+      .then(sendResponse)
+      .catch((error) => sendResponse({ error: error.message }));
+    return true;
+  }
+
   return false;
 });
 
@@ -686,6 +693,19 @@ async function ensureTopicFolder(topic, rootId) {
   return created.id;
 }
 
+async function createCustomFolder(title) {
+  const safeTitle = title.trim() || DEFAULT_TOPIC;
+  const rootId = await ensureRootFolder();
+  const children = await chrome.bookmarks.getChildren(rootId);
+  const existing = children.find((child) => child.title.toLowerCase() === safeTitle.toLowerCase() && !child.url);
+  if (existing) {
+    return { folderId: existing.id, existed: true };
+  }
+
+  const created = await chrome.bookmarks.create({ parentId: rootId, title: safeTitle });
+  return { folderId: created.id, existed: false };
+}
+
 async function findExistingBookmark(url, parentId) {
   const children = await chrome.bookmarks.getChildren(parentId);
   const match = children.find((child) => child.url === url);
@@ -717,7 +737,8 @@ async function storeMetadata(bookmarkId, topic, pageMetadata, url, title, tags =
     savedAt: previous.savedAt || new Date().toISOString(),
     domain: new URL(url).hostname,
     notes: previous.notes || '',
-    tags: tags.length > 0 ? tags : previous.tags || []
+    tags: tags.length > 0 ? tags : previous.tags || [],
+    reminder: previous.reminder || ''
   };
 
   allMetadata[bookmarkId] = metadata;
@@ -780,7 +801,8 @@ async function updateBookmark(bookmarkId, updates = {}) {
       savedAt: new Date().toISOString(),
       domain: bookmarkNode.url ? new URL(bookmarkNode.url).hostname : '',
       notes: '',
-      tags: []
+      tags: [],
+      reminder: ''
     };
   }
 
@@ -789,7 +811,8 @@ async function updateBookmark(bookmarkId, updates = {}) {
     ...('notes' in updates ? { notes: updates.notes } : {}),
     ...('tags' in updates ? { tags: updates.tags } : {}),
     ...('description' in updates ? { description: updates.description } : {}),
-    ...('title' in updates ? { title: updates.title } : {})
+    ...('title' in updates ? { title: updates.title } : {}),
+    ...('reminder' in updates ? { reminder: updates.reminder || '' } : {})
   };
   await chrome.storage.local.set({ smartMetadata: stored });
 

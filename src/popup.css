@@ -77,6 +77,11 @@ button.ghost {
   box-shadow: none;
 }
 
+.dashboard {
+  width: 100%;
+  margin: 12px 0 8px;
+}
+
 .status {
   padding: 10px 12px;
   background: white;
@@ -99,59 +104,6 @@ button.ghost {
   align-items: flex-start;
   justify-content: space-between;
   gap: 8px;
-}
-
-.tree {
-  margin-top: 18px;
-}
-
-.tree-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.tree-actions {
-  display: flex;
-  gap: 8px;
-}
-
-#folder-list {
-  list-style: none;
-  margin: 10px 0 0;
-  padding: 0;
-}
-
-.folder {
-  padding: 8px 10px;
-  border-radius: 10px;
-  background: white;
-  border: 1px solid #e5e7eb;
-  margin-bottom: 8px;
-}
-
-.folder h3 {
-  margin: 0 0 6px;
-  font-size: 14px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.folder ul {
-  list-style: disc;
-  margin: 4px 0 0 18px;
-  padding: 0;
-  color: #334155;
-}
-
-.folder li {
-  cursor: pointer;
-  padding: 2px 0;
-}
-
-.folder li:hover {
-  text-decoration: underline;
 }
 
 .muted {
@@ -195,6 +147,16 @@ select {
   font-weight: 600;
 }
 
+input[type='text'],
+input[type='datetime-local'] {
+  flex: 1;
+  padding: 9px 10px;
+  border-radius: 8px;
+  border: 1px solid #d2d6dc;
+  background: #fff;
+  font-weight: 600;
+}
+
 label {
   display: block;
   font-weight: 700;
@@ -213,6 +175,11 @@ label {
 time {
   color: #52616b;
   font-size: 12px;
+}
+
+.reminder {
+  margin-top: 6px;
+  font-size: 13px;
 }
 
 a {

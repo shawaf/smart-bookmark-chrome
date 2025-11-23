@@ -152,6 +152,7 @@ function bookmarkMatchesSearch(node, term) {
     metadata.keywords,
     metadata.notes,
     metadata.domain,
+    metadata.reminder,
     (metadata.tags || []).join(' ')
   ]
     .filter(Boolean)
@@ -208,6 +209,7 @@ function renderBookmark(node, topic, allFolders) {
   const titleEl = clone.querySelector('.title');
   const domainEl = clone.querySelector('.domain');
   const descriptionEl = clone.querySelector('.description');
+  const reminderEl = clone.querySelector('.reminder');
   const topicEl = clone.querySelector('.topic');
   const notesEl = clone.querySelector('.notes');
   const tagsEl = clone.querySelector('.tags');
@@ -219,6 +221,7 @@ function renderBookmark(node, topic, allFolders) {
   const form = clone.querySelector('.edit-form');
   const cancelBtn = clone.querySelector('.cancel');
   const folderSelect = form.querySelector('select[name="folder"]');
+  const reminderInput = form.querySelector('input[name="reminder"]');
 
   const metadata = node.metadata || {};
   const tags = (metadata.tags || []).filter(Boolean);
@@ -230,6 +233,9 @@ function renderBookmark(node, topic, allFolders) {
   titleEl.textContent = node.title || node.url;
   domainEl.textContent = metadata.domain || new URL(node.url).hostname;
   descriptionEl.textContent = metadata.description || 'No description saved';
+  reminderEl.textContent = metadata.reminder
+    ? `Reminder: ${new Date(metadata.reminder).toLocaleString()}`
+    : 'No reminder set';
   topicEl.textContent = topic;
   notesEl.textContent = metadata.notes ? `Notes: ${metadata.notes}` : '';
   tagsEl.textContent = tags.length > 0 ? tags.join(', ') : '';
@@ -309,7 +315,8 @@ function renderBookmark(node, topic, allFolders) {
       tags: (formData.get('tags') || '')
         .split(',')
         .map((tag) => tag.trim())
-        .filter(Boolean)
+        .filter(Boolean),
+      reminder: formData.get('reminder') || ''
     };
 
     if (destinationFolderId && destinationFolderId !== node.parentId) {
@@ -333,10 +340,12 @@ function populateForm(form, node, metadata, allFolders) {
   const notesInput = form.querySelector('textarea[name="notes"]');
   const tagsInput = form.querySelector('input[name="tags"]');
   const folderSelect = form.querySelector('select[name="folder"]');
+  const reminderInput = form.querySelector('input[name="reminder"]');
 
   titleInput.value = node.title || node.url;
   notesInput.value = metadata.notes || '';
   tagsInput.value = (metadata.tags || []).join(', ');
+  reminderInput.value = metadata.reminder ? formatDateTimeInput(metadata.reminder) : '';
   populateFolderSelect(folderSelect, allFolders, node.parentId);
 }
 
@@ -351,6 +360,21 @@ function populateFolderSelect(select, folders, currentFolderId) {
     }
     select.appendChild(option);
   });
+}
+
+function formatDateTimeInput(dateString) {
+  try {
+    const date = new Date(dateString);
+    const pad = (num) => String(num).padStart(2, '0');
+    const yyyy = date.getFullYear();
+    const mm = pad(date.getMonth() + 1);
+    const dd = pad(date.getDate());
+    const hh = pad(date.getHours());
+    const min = pad(date.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  } catch (error) {
+    return '';
+  }
 }
 
 function flattenFolders(nodes, acc = []) {

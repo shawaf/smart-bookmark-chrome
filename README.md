@@ -1,17 +1,18 @@
 # Smart Bookmark Organizer (Chrome Extension)
 
-A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifies it into a topic-based folder, and stores rich metadata for quick reference. The popup lets you explore all smart folders and open sites directly, and a full-page manager lets you edit or clean up bookmarks with extra notes/tags.
+A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifies it into a topic-based folder, and stores rich metadata for quick reference. The popup focuses on saving, quick folder corrections, custom folder creation, reminders, and a one-click Dashboard button that opens the full manager where you can edit or clean up bookmarks with extra notes/tags.
 
 ## Features
 - **One-click smart bookmark:** Saves the active tab, detects its topic via title/URL/page metadata, and files it into a matching folder (creates folders automatically under a Smart Bookmarks root). The classifier now weights metadata/snippets far above the domain or title so content-rich pages (e.g., YouTube engineering interviews) land in the right folder instead of generic entertainment.
 - **Metadata capture:** Stores domain, description/OG data, keyword hints, and a text snippet for at-a-glance context.
-- **Folder explorer:** Popup lists all smart folders, lets you open bookmarked sites directly, and now offers a folder picker so you can immediately adjust the auto-selected topic after saving.
-- **Full manager page:** A “See all” link opens a tab that shows every smart folder with controls to edit titles, add notes/tags, or delete bookmarks/folders.
+- **Folder control without clutter:** The popup shows the captured metadata, auto-selected folder picker, and a **Create & move** field so you can immediately send the saved tab to a brand-new folder if the suggestion is wrong—no mini list required.
+- **Full manager page:** A wide **Dashboard** button opens a tab that shows every smart folder with controls to edit titles, add notes/tags, reminders, or delete bookmarks/folders.
 - **Drag-and-drop organizer:** Grid-based manager handles lots of folders at once, lets you drag bookmarks onto any folder to move them, or pick a new folder while editing metadata.
 - **Lightweight heuristics:** No external APIs required; categorization runs locally using keyword matching, extra software-engineering/deployment terms, and URL-path cues.
 - **Fine-grained tech/learning folders:** Software items now land in focused folders such as **React & Frontend**, **Backend & APIs**, **DevOps & Delivery**, **Data Structures & Algorithms**, **Architecture & Design**, or **Engineering Management**; learning content splits into **Language Learning**, **Instructional Design/LMS**, and **Marketing Learning** when metadata supports it.
-- **Metadata-aware search:** The manager search box checks folder titles plus bookmark titles, URLs, descriptions/snippets, notes, domains, and tags so you can find anything even inside large folders.
+- **Metadata-aware search:** The manager search box checks folder titles plus bookmark titles, URLs, descriptions/snippets, notes, domains, tags, and reminders so you can find anything even inside large folders.
 - **Filter/search the manager:** Use the folder-type filter or search box on the manager page to quickly jump to a subset of folders when you have many.
+- **Reminders:** Set or clear reminders from the popup or manager; defaults to none if you leave the field blank.
 
 ## Project structure
 ```
@@ -19,7 +20,7 @@ manifest.json             # Extension manifest (MV3)
 src/background.js         # Service worker for bookmarking, categorization, and metadata storage
 src/popup.html            # Popup UI
 src/popup.css             # Popup styling
-src/popup.js              # Popup logic (save + folder explorer)
+src/popup.js              # Popup logic (save + folder and reminder controls)
 src/manage.html           # Full-page manager for editing/deleting bookmarks and metadata
 src/manage.css            # Manager styling
 src/manage.js             # Manager interactions and background calls
@@ -45,7 +46,7 @@ The script emits `assets/icon16.png`, `assets/icon48.png`, and `assets/icon128.p
 3. Enable **Developer mode** (top-right toggle).
 4. Click **Load unpacked** and select this repository folder.
 5. Pin the extension to the toolbar for quick access.
-6. From the popup, use **See all** to open the full manager page (or open it via the extension’s Options link) where you can edit bookmark titles, add notes/tags, move items to another folder (drag cards or pick a folder in Edit), or delete items/folders.
+6. From the popup, click **Dashboard** (or open the Options link) to open the full manager page where you can edit bookmark titles, add notes/tags/reminders, move items to another folder (drag cards or pick a folder in Edit), or delete items/folders.
 
 ## Quick console simulation
 If you want to see the smart-folder and metadata flow without loading Chrome, run the Node-based simulator:
@@ -63,7 +64,7 @@ It classifies sample tabs across finance, Arabic faith content, and multiple You
   3. Derive tags (including **course** for sites like Udemy/Coursera/Almentor/edX/LinkedIn Learning and **tutorial** for playlists or walkthrough pages) alongside tech/topic hints.
   4. Ensure a **Smart Bookmarks** root folder and a child folder for the detected topic; create them if they don’t exist.
   5. Create (or reuse) the bookmark, then persist a metadata record in `chrome.storage.local` keyed by the bookmark ID.
-- The popup’s folder explorer loads the Smart Bookmarks tree with stored metadata so you can open items directly or change the auto-selected folder immediately after saving.
+- The popup keeps saving streamlined: it shows the metadata snapshot, auto-selected folder picker, a custom folder creator, and reminder control alongside a single **Dashboard** button to dive into full management.
 
 ## Ready-to-deploy notes
 - No build step is required; the extension runs directly from source and paints its toolbar icon at runtime.

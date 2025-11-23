@@ -322,6 +322,7 @@ function renderBookmark(node, topic, allFolders) {
   card.dataset.bookmarkId = node.id;
   card.dataset.folderId = node.parentId || '';
   card.setAttribute('draggable', 'true');
+  let isDragging = false;
 
   titleEl.textContent = node.title || node.url;
   domainEl.textContent = metadata.domain || new URL(node.url).hostname;
@@ -335,6 +336,13 @@ function renderBookmark(node, topic, allFolders) {
   topicEl.textContent = topic;
   notesEl.textContent = metadata.notes ? `Notes: ${metadata.notes}` : '';
   tagsEl.textContent = tags.length > 0 ? tags.join(', ') : '';
+
+  card.addEventListener('click', (event) => {
+    if (isDragging) return;
+    const interactiveSelector = 'button, input, textarea, select, option, label, a, .action-menu, form';
+    if (event.target.closest(interactiveSelector)) return;
+    chrome.tabs.create({ url: node.url });
+  });
 
   const closeMenu = () => {
     actionMenu.classList.add('hidden');
@@ -389,6 +397,7 @@ function renderBookmark(node, topic, allFolders) {
   });
 
   card.addEventListener('dragstart', (event) => {
+    isDragging = true;
     card.classList.add('dragging');
     event.dataTransfer.effectAllowed = 'move';
     event.dataTransfer.setData(
@@ -398,6 +407,7 @@ function renderBookmark(node, topic, allFolders) {
   });
 
   card.addEventListener('dragend', () => {
+    isDragging = false;
     card.classList.remove('dragging');
   });
 

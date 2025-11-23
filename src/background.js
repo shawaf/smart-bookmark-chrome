@@ -878,6 +878,14 @@ async function notifyReminder(metadata) {
     return;
   }
 
+  if (chrome.notifications.getPermissionLevel) {
+    const level = await chrome.notifications.getPermissionLevel();
+    if (level !== 'granted') {
+      console.warn('Notifications permission is not granted; skipping reminder');
+      return;
+    }
+  }
+
   const iconUrl = await getReminderIconUrl();
   const title = metadata.title || 'Bookmark reminder';
   const message =

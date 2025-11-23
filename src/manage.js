@@ -415,6 +415,16 @@ function renderBookmark(node, topic, allFolders) {
     event.preventDefault();
     const formData = new FormData(form);
     const destinationFolderId = formData.get('folder');
+    const reminderValue = formData.get('reminder') || '';
+
+    if (reminderValue) {
+      const allowed = await ensureNotificationPermission();
+      if (!allowed) {
+        setStatus('Enable notifications to use reminders.', 'error');
+        return;
+      }
+    }
+
     const updates = {
       title: formData.get('title') || node.title,
       notes: formData.get('notes') || '',
@@ -422,7 +432,7 @@ function renderBookmark(node, topic, allFolders) {
         .split(',')
         .map((tag) => tag.trim())
         .filter(Boolean),
-      reminder: formData.get('reminder') || ''
+      reminder: reminderValue
     };
 
     if (destinationFolderId && destinationFolderId !== node.parentId) {
@@ -439,6 +449,24 @@ function renderBookmark(node, topic, allFolders) {
   });
 
   return clone;
+}
+
+async function ensureNotificationPermission() {
+  if (typeof Notification === 'undefined' || Notification.permission === 'granted') {
+    return true;
+  }
+
+  if (Notification.permission === 'denied') {
+    return false;
+  }
+
+  try {
+    const result = await Notification.requestPermission();
+    return result === 'granted';
+  } catch (error) {
+    console.warn('Notification permission request failed', error);
+    return false;
+  }
 }
 
 function populateForm(form, node, metadata, allFolders) {

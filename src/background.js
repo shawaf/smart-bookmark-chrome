@@ -298,6 +298,8 @@ const TAG_HINTS = {
 
 const REMINDER_ALARM_PREFIX = 'smartReminder:';
 const REMINDER_ICON_SIZE = 128;
+const REMINDER_ICON_FALLBACK_DATA_URL =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAAL0lEQVR42u3BMQEAAADCoPVPbQhPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC8GeZtAAEF+3ykAAAAAElFTkSuQmCC';
 
 let iconDataCache = null;
 let reminderIconDataUrl = null;
@@ -475,16 +477,23 @@ async function getReminderIconUrl() {
     return reminderIconDataUrl;
   }
 
-  const fallback = createFallbackIconImageData(REMINDER_ICON_SIZE);
-  if (!fallback || typeof OffscreenCanvas === 'undefined' || typeof FileReader === 'undefined') {
-    return null;
+  // Always provide a valid data URL so notification creation never fails, even
+  // if canvas APIs are unavailable in the current context.
+  try {
+    const fallback = createFallbackIconImageData(REMINDER_ICON_SIZE);
+    if (fallback && typeof OffscreenCanvas !== 'undefined' && typeof FileReader !== 'undefined') {
+      const canvas = new OffscreenCanvas(REMINDER_ICON_SIZE, REMINDER_ICON_SIZE);
+      const context = canvas.getContext('2d');
+      context.putImageData(fallback, 0, 0);
+      const blob = await canvas.convertToBlob({ type: 'image/png' });
+      reminderIconDataUrl = await blobToDataUrl(blob);
+      return reminderIconDataUrl;
+    }
+  } catch (error) {
+    console.warn('Falling back to inline reminder icon', error);
   }
 
-  const canvas = new OffscreenCanvas(REMINDER_ICON_SIZE, REMINDER_ICON_SIZE);
-  const context = canvas.getContext('2d');
-  context.putImageData(fallback, 0, 0);
-  const blob = await canvas.convertToBlob({ type: 'image/png' });
-  reminderIconDataUrl = await blobToDataUrl(blob);
+  reminderIconDataUrl = REMINDER_ICON_FALLBACK_DATA_URL;
   return reminderIconDataUrl;
 }
 

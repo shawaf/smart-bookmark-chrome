@@ -1,0 +1,11 @@
+{
+  "name": "smart-bookmark-chrome",
+  "version": "1.0.0",
+  "description": "Smart bookmark Chrome extension utilities.",
+  "private": true,
+  "scripts": {
+    "postinstall": "node scripts/generate-icons.js",
+    "generate:icons": "node scripts/generate-icons.js",
+    "simulate": "node scripts/simulate.js"
+  }
+}

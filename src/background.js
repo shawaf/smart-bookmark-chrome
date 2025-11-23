@@ -656,6 +656,13 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'ENSURE_REMINDERS_READY') {
+    hydrateReminders()
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ error: error.message }));
+    return true;
+  }
+
   return false;
 });
 

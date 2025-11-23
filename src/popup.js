@@ -26,6 +26,9 @@ let lastSavedTopic = null;
 let manualFolderColor = false;
 newFolderColor.value = suggestColorFromSeed('Smart Bookmark');
 
+// Request notification permission early so reminders can schedule without missing alarms.
+primeReminderSupport();
+
 saveButton.addEventListener('click', async () => {
   toggleLoading(true);
   setStatus('Categorizing tab and saving bookmark…', '');
@@ -67,6 +70,15 @@ function toggleLoading(isLoading) {
     saveButton.textContent = 'Working…';
   } else {
     saveButton.textContent = 'Smart bookmark this tab';
+  }
+}
+
+async function primeReminderSupport() {
+  try {
+    await ensureNotificationPermission();
+    await chrome.runtime.sendMessage({ type: 'ENSURE_REMINDERS_READY' });
+  } catch (error) {
+    console.warn('Unable to prepare reminder support', error);
   }
 }
 

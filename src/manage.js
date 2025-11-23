@@ -13,6 +13,7 @@ let currentFilterKey = 'all';
 let currentSearch = '';
 let currentDateFilter = '';
 let currentTheme = 'light';
+let reminderPrepared = false;
 
 const FOLDER_FILTERS = [
   { key: 'all', label: 'All folders', matcher: () => true },
@@ -72,6 +73,7 @@ if (!chrome?.runtime?.sendMessage) {
   refreshButton.disabled = true;
 } else {
   initFilters();
+  prepareReminderSupport();
   folderFilter.addEventListener('change', () => {
     currentFilterKey = folderFilter.value;
     renderFoldersFromState();
@@ -106,6 +108,17 @@ function initThemeToggle() {
       if (userChoice === 'dark' || userChoice === 'light') return;
       applyTheme(event.matches ? 'dark' : 'light');
     });
+  }
+}
+
+async function prepareReminderSupport() {
+  if (reminderPrepared) return;
+  reminderPrepared = true;
+  try {
+    await ensureNotificationPermission();
+    await chrome.runtime.sendMessage({ type: 'ENSURE_REMINDERS_READY' });
+  } catch (error) {
+    console.warn('Unable to prepare reminders in manager', error);
   }
 }
 

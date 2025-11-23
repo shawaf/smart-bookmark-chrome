@@ -4,10 +4,12 @@ const refreshButton = document.getElementById('refresh');
 const backToPopup = document.getElementById('back-to-popup');
 const folderFilter = document.getElementById('folder-filter');
 const folderSearch = document.getElementById('folder-search');
+const dateFilter = document.getElementById('date-filter');
 let folderOptions = [];
 let currentTree = null;
 let currentFilterKey = 'all';
 let currentSearch = '';
+let currentDateFilter = '';
 
 const FOLDER_FILTERS = [
   { key: 'all', label: 'All folders', matcher: () => true },
@@ -73,6 +75,10 @@ if (!chrome?.runtime?.sendMessage) {
     currentSearch = event.target.value.toLowerCase();
     renderFoldersFromState();
   });
+  dateFilter.addEventListener('change', (event) => {
+    currentDateFilter = event.target.value;
+    renderFoldersFromState();
+  });
   loadTree();
 }
 
@@ -106,7 +112,10 @@ function renderFoldersFromState() {
 
   const total = currentTree.children?.length || 0;
   const filtered = (currentTree.children || []).filter(
-    (folder) => matchesFilter(folder.title, currentFilterKey) && matchesSearch(folder, currentSearch)
+    (folder) =>
+      matchesFilter(folder.title, currentFilterKey) &&
+      matchesSearch(folder, currentSearch) &&
+      matchesDate(folder, currentDateFilter)
   );
 
   if (filtered.length === 0) {
@@ -120,7 +129,9 @@ function renderFoldersFromState() {
     'success'
   );
   foldersContainer.innerHTML = '';
-  filtered.forEach((folder) => foldersContainer.appendChild(renderFolder(folder, folderOptions)));
+  filtered.forEach((folder) =>
+    foldersContainer.appendChild(renderFolder(folder, folderOptions, currentSearch, currentDateFilter))
+  );
 }
 
 function matchesFilter(title, filterKey) {
@@ -130,7 +141,7 @@ function matchesFilter(title, filterKey) {
   return filter.matcher(normalized);
 }
 
-function matchesSearch(folder, term) {
+function matchesSearch(folder, term = '') {
   if (!term) return true;
 
   const normalized = term.toLowerCase();
@@ -139,6 +150,12 @@ function matchesSearch(folder, term) {
 
   const children = folder.children || [];
   return children.some((child) => bookmarkMatchesSearch(child, normalized));
+}
+
+function matchesDate(folder, dateString = '') {
+  if (!dateString) return true;
+  const children = folder.children || [];
+  return children.some((child) => bookmarkMatchesDate(child, dateString));
 }
 
 function bookmarkMatchesSearch(node, term) {
@@ -153,6 +170,7 @@ function bookmarkMatchesSearch(node, term) {
     metadata.notes,
     metadata.domain,
     metadata.reminder,
+    metadata.savedAt,
     (metadata.tags || []).join(' ')
   ]
     .filter(Boolean)
@@ -162,12 +180,26 @@ function bookmarkMatchesSearch(node, term) {
   return haystack.includes(term);
 }
 
+function bookmarkMatchesDate(node, dateString = '') {
+  if (!dateString || !node.url) return false;
+  const metadata = node.metadata || {};
+  if (!metadata.savedAt) return false;
+  try {
+    const savedDate = new Date(metadata.savedAt);
+    if (Number.isNaN(savedDate.getTime())) return false;
+    const isoDay = savedDate.toISOString().slice(0, 10);
+    return isoDay === dateString;
+  } catch (error) {
+    return false;
+  }
+}
+
 function setStatus(message, tone = '') {
   statusEl.textContent = message;
   statusEl.className = `status ${tone}`.trim();
 }
 
-function renderFolder(folder, allFolders) {
+function renderFolder(folder, allFolders, searchTerm = '', dateFilter = '') {
   const template = document.getElementById('folder-template');
   const clone = template.content.cloneNode(true);
   const card = clone.querySelector('.folder-card');
@@ -189,8 +221,14 @@ function renderFolder(folder, allFolders) {
   card.dataset.folderId = folder.id;
   titleEl.textContent = folder.title;
   const children = folder.children || [];
+  const normalizedSearch = searchTerm.toLowerCase();
   const onlyLinks = children.filter((child) => child.url);
-  countEl.textContent = `${onlyLinks.length} saved tab${onlyLinks.length === 1 ? '' : 's'}`;
+  const visibleLinks = onlyLinks.filter(
+    (child) => bookmarkMatchesSearch(child, normalizedSearch) && bookmarkMatchesDate(child, dateFilter)
+  );
+
+  const countLabel = dateFilter || normalizedSearch ? visibleLinks.length : onlyLinks.length;
+  countEl.textContent = `${countLabel} saved tab${countLabel === 1 ? '' : 's'}`;
 
   attachDropTarget(card, folder.id);
   deleteBtn.addEventListener('click', async () => {
@@ -200,13 +238,19 @@ function renderFolder(folder, allFolders) {
     }
   });
 
-  if (onlyLinks.length === 0) {
+  const linksToRender = dateFilter || normalizedSearch ? visibleLinks : onlyLinks;
+
+  if (linksToRender.length === 0) {
     const empty = document.createElement('p');
-    empty.textContent = 'No bookmarks in this folder yet.';
+    empty.textContent = dateFilter || normalizedSearch
+      ? 'No bookmarks match this search yet.'
+      : 'No bookmarks in this folder yet.';
     empty.className = 'empty';
     bookmarksContainer.appendChild(empty);
   } else {
-    onlyLinks.forEach((child) => bookmarksContainer.appendChild(renderBookmark(child, folder.title, allFolders)));
+    linksToRender.forEach((child) =>
+      bookmarksContainer.appendChild(renderBookmark(child, folder.title, allFolders))
+    );
   }
 
   return clone;
@@ -219,6 +263,7 @@ function renderBookmark(node, topic, allFolders) {
   const titleEl = clone.querySelector('.title');
   const domainEl = clone.querySelector('.domain');
   const descriptionEl = clone.querySelector('.description');
+  const savedTimeEl = clone.querySelector('.saved-time');
   const reminderEl = clone.querySelector('.reminder');
   const topicEl = clone.querySelector('.topic');
   const notesEl = clone.querySelector('.notes');
@@ -243,6 +288,9 @@ function renderBookmark(node, topic, allFolders) {
   titleEl.textContent = node.title || node.url;
   domainEl.textContent = metadata.domain || new URL(node.url).hostname;
   descriptionEl.textContent = metadata.description || 'No description saved';
+  savedTimeEl.textContent = metadata.savedAt
+    ? `Saved ${new Date(metadata.savedAt).toLocaleString()}`
+    : 'Saved date unavailable';
   reminderEl.textContent = metadata.reminder
     ? `Reminder: ${new Date(metadata.reminder).toLocaleString()}`
     : 'No reminder set';

@@ -11,8 +11,8 @@ A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifie
 - **Endless folder palettes:** Each folder gets its own auto-generated color palette (surface/border/accent/text) so large grids stay visually scannable; when creating a folder from the popup you can also choose your own color.
 - **Lightweight heuristics:** No external APIs required; categorization runs locally using keyword matching, extra software-engineering/deployment terms, and URL-path cues.
 - **Fine-grained tech/learning folders:** Software items now land in focused folders such as **React & Frontend**, **Backend & APIs**, **DevOps & Delivery**, **Data Structures & Algorithms**, **Architecture & Design**, or **Engineering Management**; learning content splits into **Language Learning**, **Instructional Design/LMS**, and **Marketing Learning** when metadata supports it.
-- **Metadata-aware search:** The manager search box checks folder titles plus bookmark titles, URLs, descriptions/snippets, notes, domains, tags, and reminders so you can find anything even inside large folders.
-- **Filter/search the manager:** Use the folder-type filter or search box on the manager page to quickly jump to a subset of folders when you have many.
+- **Timestamped, metadata-aware search:** The manager search box checks folder titles plus bookmark titles, URLs, descriptions/snippets, notes, domains, tags, reminders, and saved times so you can find anything even inside large folders.
+- **Filter/search the manager:** Use the folder-type filter or search box on the manager page to quickly jump to a subset of folders when you have many, and narrow further by picking a specific saved date.
 - **Reminders:** Set or clear reminders from the popup or manager; defaults to none if you leave the field blank, and reminder notifications will fire at the scheduled time.
 
 ## Project structure

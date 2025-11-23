@@ -12,7 +12,7 @@ A Manifest V3 Chrome extension that smartly bookmarks the current tab, classifie
 - **Fine-grained tech/learning folders:** Software items now land in focused folders such as **React & Frontend**, **Backend & APIs**, **DevOps & Delivery**, **Data Structures & Algorithms**, **Architecture & Design**, or **Engineering Management**; learning content splits into **Language Learning**, **Instructional Design/LMS**, and **Marketing Learning** when metadata supports it.
 - **Metadata-aware search:** The manager search box checks folder titles plus bookmark titles, URLs, descriptions/snippets, notes, domains, tags, and reminders so you can find anything even inside large folders.
 - **Filter/search the manager:** Use the folder-type filter or search box on the manager page to quickly jump to a subset of folders when you have many.
-- **Reminders:** Set or clear reminders from the popup or manager; defaults to none if you leave the field blank.
+- **Reminders:** Set or clear reminders from the popup or manager; defaults to none if you leave the field blank, and reminder notifications will fire at the scheduled time.
 
 ## Project structure
 ```
@@ -47,6 +47,7 @@ The script emits `assets/icon16.png`, `assets/icon48.png`, and `assets/icon128.p
 4. Click **Load unpacked** and select this repository folder.
 5. Pin the extension to the toolbar for quick access.
 6. From the popup, click **Dashboard** (or open the Options link) to open the full manager page where you can edit bookmark titles, add notes/tags/reminders, move items to another folder (drag cards or pick a folder in Edit), or delete items/folders.
+7. When prompted, allow notification access so reminder alarms can surface a toast at the scheduled time.
 
 ## Quick console simulation
 If you want to see the smart-folder and metadata flow without loading Chrome, run the Node-based simulator:

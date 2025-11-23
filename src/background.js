@@ -295,19 +295,27 @@ const TAG_HINTS = {
   interview_prep: ['interview prep', 'mock interview', 'behavioral', 'system design']
 };
 
+const REMINDER_ALARM_PREFIX = 'smartReminder:';
+const REMINDER_ICON_SIZE = 128;
+
 let iconDataCache = null;
+let reminderIconDataUrl = null;
 
 scheduleDynamicIconRefresh();
+
+hydrateReminders();
 
 if (chrome.runtime?.onStartup) {
   chrome.runtime.onStartup.addListener(() => {
     scheduleDynamicIconRefresh();
+    hydrateReminders();
   });
 }
 
 chrome.runtime.onInstalled.addListener(() => {
   scheduleDynamicIconRefresh();
   ensureRootFolder();
+  hydrateReminders();
 });
 
 function scheduleDynamicIconRefresh() {
@@ -453,6 +461,39 @@ function createFallbackIconImageData(size) {
   }
 
   return new ImageData(data, size, size);
+}
+
+async function getReminderIconUrl() {
+  if (reminderIconDataUrl) {
+    return reminderIconDataUrl;
+  }
+
+  const base64Map = await loadIconData();
+  if (base64Map && base64Map[String(REMINDER_ICON_SIZE)]) {
+    reminderIconDataUrl = `data:image/png;base64,${base64Map[String(REMINDER_ICON_SIZE)]}`;
+    return reminderIconDataUrl;
+  }
+
+  const fallback = createFallbackIconImageData(REMINDER_ICON_SIZE);
+  if (!fallback || typeof OffscreenCanvas === 'undefined' || typeof FileReader === 'undefined') {
+    return null;
+  }
+
+  const canvas = new OffscreenCanvas(REMINDER_ICON_SIZE, REMINDER_ICON_SIZE);
+  const context = canvas.getContext('2d');
+  context.putImageData(fallback, 0, 0);
+  const blob = await canvas.convertToBlob({ type: 'image/png' });
+  reminderIconDataUrl = await blobToDataUrl(blob);
+  return reminderIconDataUrl;
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
 }
 
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -648,6 +689,95 @@ function deriveTags(pageMetadata, tab, topic) {
   return Array.from(tags);
 }
 
+async function scheduleReminderAlarm(bookmarkId, reminder) {
+  if (!chrome?.alarms?.create || !chrome?.alarms?.clear) {
+    return;
+  }
+
+  const alarmName = `${REMINDER_ALARM_PREFIX}${bookmarkId}`;
+  await chrome.alarms.clear(alarmName);
+
+  if (!reminder) {
+    return;
+  }
+
+  const when = Date.parse(reminder);
+  if (Number.isNaN(when) || when <= Date.now()) {
+    return;
+  }
+
+  await chrome.alarms.create(alarmName, { when });
+}
+
+async function hydrateReminders() {
+  if (!chrome?.alarms?.clearAll) {
+    return;
+  }
+
+  try {
+    const stored = await chrome.storage.local.get('smartMetadata');
+    const metadataMap = stored.smartMetadata || {};
+    const entries = Object.values(metadataMap).filter((item) => item.reminder);
+    await chrome.alarms.clearAll();
+
+    await Promise.all(
+      entries.map((item) => scheduleReminderAlarm(item.id, item.reminder))
+    );
+  } catch (error) {
+    console.warn('Unable to hydrate reminders', error);
+  }
+}
+
+chrome.alarms?.onAlarm.addListener(async (alarm) => {
+  if (!alarm?.name?.startsWith(REMINDER_ALARM_PREFIX)) {
+    return;
+  }
+
+  const bookmarkId = alarm.name.replace(REMINDER_ALARM_PREFIX, '');
+  const metadata = await getStoredMetadata(bookmarkId);
+
+  if (!metadata) {
+    return;
+  }
+
+  await notifyReminder(metadata);
+
+  // Clear the reminder so it does not rehydrate on future loads.
+  await updateBookmark(bookmarkId, { reminder: '' });
+});
+
+chrome.notifications?.onClicked.addListener(async (notificationId) => {
+  if (!notificationId.startsWith(REMINDER_ALARM_PREFIX)) return;
+
+  const bookmarkId = notificationId.replace(REMINDER_ALARM_PREFIX, '');
+  const metadata = await getStoredMetadata(bookmarkId);
+  if (metadata?.url && chrome?.tabs?.create) {
+    await chrome.tabs.create({ url: metadata.url });
+  }
+  chrome.notifications.clear(notificationId);
+});
+
+async function notifyReminder(metadata) {
+  if (!chrome?.notifications?.create) {
+    return;
+  }
+
+  const iconUrl = await getReminderIconUrl();
+  const title = metadata.title || 'Bookmark reminder';
+  const message =
+    metadata.notes || metadata.description || metadata.snippet || metadata.url || 'You set a reminder for this bookmark.';
+
+  const options = {
+    type: 'basic',
+    title,
+    message,
+    iconUrl: iconUrl || undefined,
+    priority: 2
+  };
+
+  await chrome.notifications.create(`${REMINDER_ALARM_PREFIX}${metadata.id}`, options);
+}
+
 async function ensureRootFolder() {
   const cached = await chrome.storage.local.get(SMART_ROOT_ID_KEY);
   if (cached[SMART_ROOT_ID_KEY]) {
@@ -816,6 +946,10 @@ async function updateBookmark(bookmarkId, updates = {}) {
   };
   await chrome.storage.local.set({ smartMetadata: stored });
 
+  if ('reminder' in updates) {
+    await scheduleReminderAlarm(bookmarkId, stored[bookmarkId].reminder);
+  }
+
   return { ok: true };
 }
 
@@ -859,6 +993,7 @@ async function deleteNode(nodeId) {
   } else {
     await chrome.bookmarks.remove(nodeId);
     delete stored[nodeId];
+    await clearReminderAlarm(nodeId);
   }
 
   await chrome.storage.local.set({ smartMetadata: stored });
@@ -867,6 +1002,19 @@ async function deleteNode(nodeId) {
 
 function removeMetadataForBranch(node, metadataMap) {
   delete metadataMap[node.id];
+  clearReminderAlarm(node.id);
   if (!node.children) return;
   node.children.forEach((child) => removeMetadataForBranch(child, metadataMap));
+}
+
+function clearReminderAlarm(bookmarkId) {
+  if (!chrome?.alarms?.clear) return;
+  try {
+    const maybePromise = chrome.alarms.clear(`${REMINDER_ALARM_PREFIX}${bookmarkId}`);
+    if (maybePromise?.catch) {
+      maybePromise.catch((error) => console.warn('Failed to clear reminder alarm', error));
+    }
+  } catch (error) {
+    console.warn('Failed to clear reminder alarm', error);
+  }
 }

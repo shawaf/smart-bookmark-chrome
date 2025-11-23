@@ -893,20 +893,36 @@ async function notifyReminder(metadata) {
     }
   }
 
+  const extensionName = chrome.runtime?.getManifest?.().name || 'Smart Bookmark Organizer';
   const iconUrl = await getReminderIconUrl();
   const title = metadata.title || 'Bookmark reminder';
-  const message =
-    metadata.notes || metadata.description || metadata.snippet || metadata.url || 'You set a reminder for this bookmark.';
+  const body = metadata.notes || metadata.description || metadata.snippet || metadata.url || 'You set a reminder for this bookmark.';
+  const message = `${title} — ${body}`;
 
   const options = {
     type: 'basic',
-    title,
+    title: extensionName,
     message,
     iconUrl: iconUrl || undefined,
-    priority: 2
+    priority: 2,
+    requireInteraction: true
   };
 
   await chrome.notifications.create(`${REMINDER_ALARM_PREFIX}${metadata.id}`, options);
+  await playReminderSound();
+}
+
+async function playReminderSound() {
+  try {
+    if (typeof Audio === 'undefined') return;
+    const sound = new Audio(
+      'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+    );
+    sound.volume = 0.6;
+    await sound.play();
+  } catch (error) {
+    console.warn('Unable to play reminder sound', error);
+  }
 }
 
 async function ensureRootFolder() {

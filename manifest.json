@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Smart Bookmark Organizer",
+  "version": "1.0.0",
+  "description": "Smartly organizes bookmarks by topic with metadata-rich folders and a friendly popup explorer.",
+  "action": {
+    "default_popup": "src/popup.html",
+    "default_title": "Smart Bookmark Organizer"
+  },
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "tabs",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "options_ui": {
+    "page": "src/manage.html",
+    "open_in_tab": true
+  }
+}

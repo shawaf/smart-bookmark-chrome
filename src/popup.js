@@ -10,6 +10,7 @@ const metadataDate = document.getElementById('metadata-date');
 const metadataDescription = document.getElementById('metadata-description');
 const metadataSnippet = document.getElementById('metadata-snippet');
 const metadataTags = document.getElementById('metadata-tags');
+const metadataIcon = document.getElementById('metadata-icon');
 const folderEditor = document.getElementById('folder-editor');
 const folderSelect = document.getElementById('folder-select');
 const moveFolderButton = document.getElementById('move-folder');
@@ -98,6 +99,14 @@ function displayMetadata(metadata) {
   metadataTopic.textContent = metadata.topic;
   metadataTitle.textContent = metadata.title;
   metadataDomain.textContent = metadata.domain;
+
+  if (metadata.iconUrl) {
+    metadataIcon.src = metadata.iconUrl;
+    metadataIcon.classList.remove('hidden');
+  } else {
+    metadataIcon.classList.add('hidden');
+  }
+
   metadataDate.textContent = new Date(metadata.savedAt).toLocaleString();
   metadataDescription.textContent = metadata.description || 'No description found';
   metadataSnippet.textContent = metadata.snippet || '';

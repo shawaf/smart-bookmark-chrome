@@ -26,22 +26,24 @@
 :root.theme-dark {
   --text: #e2e8f0;
   --muted: #94a3b8;
-  --background: #0b1220;
-  --panel: #0f172a;
-  --border: #1f2937;
+  --background: #1e1e1e;
+  /* VS Code-like background */
+  --panel: #252526;
+  --border: #3e3e42;
   --shadow: rgba(0, 0, 0, 0.45);
   --accent: #38bdf8;
   --accent-strong: #0ea5e9;
-  --status: #111827;
+  --status: #252526;
   --status-success: rgba(56, 189, 248, 0.12);
   --status-error: #2f1a1a;
   --danger: #f87171;
-  --bookmark-bg: #0f172a;
-  --bookmark-border: #1f2937;
+  --bookmark-bg: transparent;
+  /* Remove background */
+  --bookmark-border: #3e3e42;
   --drag-bg: rgba(56, 189, 248, 0.08);
   --drag-border: #38bdf8;
-  --field-bg: #111827;
-  --field-border: #1f2937;
+  --field-bg: #3c3c3c;
+  --field-border: #3e3e42;
   color-scheme: dark;
 }
 
@@ -167,6 +169,12 @@ h1 {
   -moz-column-break-inside: avoid;
   width: 100%;
   margin-bottom: 18px;
+  background: var(--folder-surface);
+}
+
+:root.theme-dark .folder-card {
+  background: transparent;
+  /* Remove folder card background in dark mode */
 }
 
 .folder-card header {
@@ -222,7 +230,7 @@ h1 {
   width: 100%;
 }
 
-.bookmark > * {
+.bookmark>* {
   width: 100%;
 }
 
@@ -428,4 +436,177 @@ button:disabled {
   justify-content: center;
   font-size: 18px;
   line-height: 1;
+}
+
+/* Mindmap Styles */
+.mindmap-container {
+  width: 100%;
+  height: calc(100vh - 200px);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.mindmap-container.hidden {
+  display: none;
+}
+
+#mindmap-svg {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#mindmap-svg:active {
+  cursor: grabbing;
+}
+
+/* Mindmap Animations */
+@keyframes popIn {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+
+  70% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes drawLine {
+  from {
+    stroke-dashoffset: 1000;
+  }
+
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 10px rgba(56, 189, 248, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0);
+  }
+}
+
+.mindmap-node {
+  cursor: grab;
+  transition: transform 0.1s ease, filter 0.2s ease;
+  transform-origin: center;
+}
+
+.mindmap-node:active {
+  cursor: grabbing;
+}
+
+.mindmap-node:hover {
+  filter: brightness(1.1);
+}
+
+.mindmap-node circle {
+  fill: var(--folder-surface);
+  stroke: var(--folder-border);
+  stroke-width: 2px;
+  transition: fill 0.3s ease;
+}
+
+.mindmap-node.root circle {
+  fill: var(--accent);
+  stroke: var(--accent-strong);
+  stroke-width: 4px;
+  filter: drop-shadow(0 4px 10px rgba(56, 189, 248, 0.4));
+}
+
+.mindmap-node.folder circle {
+  fill: var(--folder-surface);
+  stroke: var(--folder-accent);
+  stroke-width: 3px;
+}
+
+.mindmap-node.bookmark circle {
+  fill: var(--bookmark-bg);
+  stroke: var(--bookmark-border);
+  stroke-width: 1px;
+}
+
+.mindmap-node.bookmark:hover circle {
+  fill: var(--accent);
+  stroke: var(--accent);
+}
+
+.mindmap-node text {
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  fill: var(--text);
+  pointer-events: none;
+  text-shadow: 0 1px 2px var(--background);
+}
+
+.mindmap-edge {
+  fill: none;
+  stroke: var(--border);
+  stroke-width: 2px;
+  stroke-linecap: round;
+  opacity: 0.6;
+}
+
+.mindmap-edge.bookmark-edge {
+  stroke-width: 1px;
+  opacity: 0.4;
+}
+
+.view-toggle {
+  display: flex;
+  gap: 4px;
+  background: var(--field-bg);
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--field-border);
+}
+
+.view-toggle button {
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 6px;
+}
+
+.view-toggle button.active {
+  background: var(--accent);
+  color: white;
+}
+
+.view-toggle button.ghost {
+  background: transparent;
+  color: var(--text);
+}
+
+.view-toggle button.ghost:hover {
+  background: var(--drag-bg);
+}
+
+.site-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  object-fit: contain;
+  background: #f1f5f9;
+  padding: 2px;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
 }

@@ -2,10 +2,17 @@ const statusEl = document.getElementById('status');
 const foldersContainer = document.getElementById('folders');
 const refreshButton = document.getElementById('refresh');
 const backToPopup = document.getElementById('back-to-popup');
+const testNotificationBtn = document.getElementById('test-notification');
+const clearAllBtn = document.getElementById('clear-all-bookmarks');
 const folderFilter = document.getElementById('folder-filter');
 const folderSearch = document.getElementById('folder-search');
 const dateFilter = document.getElementById('date-filter');
 const themeToggle = document.getElementById('theme-toggle');
+const viewListBtn = document.getElementById('view-list');
+const viewMindmapBtn = document.getElementById('view-mindmap');
+const foldersSection = document.getElementById('folders');
+const mindmapSection = document.getElementById('mindmap');
+const mindmapSvg = document.getElementById('mindmap-svg');
 const THEME_KEY = 'smartBookmarkTheme';
 let folderOptions = [];
 let currentTree = null;
@@ -66,6 +73,38 @@ backToPopup.addEventListener('click', () => {
   chrome.tabs.create({ url: chrome.runtime.getURL('src/popup.html') });
 });
 
+if (testNotificationBtn) {
+  testNotificationBtn.addEventListener('click', async () => {
+    try {
+      const allowed = await ensureNotificationPermission();
+      if (!allowed) {
+        setStatus('Notifications not allowed.', 'error');
+        return;
+      }
+      await chrome.runtime.sendMessage({ type: 'TEST_NOTIFICATION' });
+      setStatus('Test notification sent.', 'success');
+    } catch (error) {
+      console.error('Test notification failed', error);
+      setStatus('Test notification failed.', 'error');
+    }
+  });
+}
+
+if (clearAllBtn) {
+  clearAllBtn.addEventListener('click', async () => {
+    if (confirm('Are you sure you want to delete ALL smart bookmarks? This cannot be undone.')) {
+      try {
+        await chrome.runtime.sendMessage({ type: 'DELETE_ALL' });
+        loadTree();
+        setStatus('All bookmarks cleared.', 'success');
+      } catch (error) {
+        console.error('Failed to clear bookmarks', error);
+        setStatus('Failed to clear bookmarks.', 'error');
+      }
+    }
+  });
+}
+
 initThemeToggle();
 
 if (!chrome?.runtime?.sendMessage) {
@@ -87,6 +126,7 @@ if (!chrome?.runtime?.sendMessage) {
     renderFoldersFromState();
   });
   loadTree();
+  initViewToggles();
 }
 
 function initThemeToggle() {
@@ -151,6 +191,11 @@ async function loadTree() {
     currentTree = tree;
     folderOptions = flattenFolders(tree.children || []);
     renderFoldersFromState();
+
+    // Refresh mindmap if it's visible
+    if (!mindmapSection.classList.contains('hidden')) {
+      renderMindmap();
+    }
   } catch (error) {
     console.error('Failed to load smart bookmarks', error);
     setStatus(`Could not load bookmarks: ${error.message}`, 'error');
@@ -336,6 +381,18 @@ function renderBookmark(node, topic, allFolders) {
   card.dataset.folderId = node.parentId || '';
   card.setAttribute('draggable', 'true');
   let isDragging = false;
+
+  // Add icon if available
+  if (metadata.iconUrl) {
+    const icon = document.createElement('img');
+    icon.src = metadata.iconUrl;
+    icon.className = 'site-icon';
+    icon.alt = '';
+    // Insert before title or inside a header wrapper if one existed, 
+    // but here we'll prepend to the card or wrap title/domain.
+    // Let's insert it at the beginning of the card content
+    card.insertBefore(icon, card.firstChild);
+  }
 
   titleEl.textContent = node.title || node.url;
   domainEl.textContent = metadata.domain || new URL(node.url).hostname;
@@ -573,4 +630,282 @@ function attachDropTarget(card, folderId) {
       setStatus(`Could not move bookmark: ${error.message}`, 'error');
     }
   });
+}
+
+/* Mindmap Implementation */
+
+function initViewToggles() {
+  if (!viewListBtn || !viewMindmapBtn) return;
+
+  viewListBtn.addEventListener('click', () => switchView('list'));
+  viewMindmapBtn.addEventListener('click', () => switchView('mindmap'));
+}
+
+function switchView(view) {
+  if (view === 'list') {
+    viewListBtn.classList.add('active');
+    viewListBtn.classList.remove('ghost');
+    viewListBtn.setAttribute('aria-pressed', 'true');
+    viewMindmapBtn.classList.remove('active');
+    viewMindmapBtn.classList.add('ghost');
+    viewMindmapBtn.setAttribute('aria-pressed', 'false');
+
+    foldersSection.classList.remove('hidden');
+    mindmapSection.classList.add('hidden');
+
+    // Update status message for list view
+    renderFoldersFromState();
+  } else {
+    viewMindmapBtn.classList.add('active');
+    viewMindmapBtn.classList.remove('ghost');
+    viewMindmapBtn.setAttribute('aria-pressed', 'true');
+    viewListBtn.classList.remove('active');
+    viewListBtn.classList.add('ghost');
+    viewListBtn.setAttribute('aria-pressed', 'false');
+
+    foldersSection.classList.add('hidden');
+    mindmapSection.classList.remove('hidden');
+
+    // Update status message for mindmap view
+    const total = currentTree?.children?.length || 0;
+    setStatus(`Mindmap view: ${total} folder${total === 1 ? '' : 's'}. Drag nodes to reposition. Double-click bookmarks to open.`, 'success');
+
+    renderMindmap();
+  }
+}
+
+let simulation = null;
+
+function renderMindmap() {
+  if (!currentTree || !mindmapSvg) return;
+
+  // Stop previous simulation if running
+  if (simulation) {
+    simulation.stop();
+  }
+
+  mindmapSvg.innerHTML = '';
+
+  const width = mindmapSection.clientWidth;
+  const height = mindmapSection.clientHeight;
+
+  if (width === 0 || height === 0) {
+    setTimeout(renderMindmap, 50);
+    return;
+  }
+
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  // Prepare nodes and links
+  const nodes = [];
+  const links = [];
+
+  // Root
+  const rootNode = { id: 'root', x: centerX, y: centerY, vx: 0, vy: 0, type: 'root', title: 'All Bookmarks', r: 30 };
+  nodes.push(rootNode);
+
+  const folders = currentTree.children || [];
+  folders.forEach((folder, i) => {
+    const folderNode = {
+      id: folder.id,
+      x: centerX + (Math.random() - 0.5) * 50,
+      y: centerY + (Math.random() - 0.5) * 50,
+      vx: 0,
+      vy: 0,
+      type: 'folder',
+      title: folder.title,
+      r: 20
+    };
+    nodes.push(folderNode);
+    links.push({ source: rootNode, target: folderNode, distance: 150 });
+
+    const bookmarks = (folder.children || []).filter((c) => c.url).slice(0, 5);
+    bookmarks.forEach((bm) => {
+      const bmNode = {
+        id: bm.id,
+        x: folderNode.x + (Math.random() - 0.5) * 20,
+        y: folderNode.y + (Math.random() - 0.5) * 20,
+        vx: 0,
+        vy: 0,
+        type: 'bookmark',
+        title: bm.title,
+        url: bm.url,
+        r: 6
+      };
+      nodes.push(bmNode);
+      links.push({ source: folderNode, target: bmNode, distance: 80 });
+    });
+  });
+
+  // Create SVG elements
+  const mapGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  mindmapSvg.appendChild(mapGroup);
+
+  // Draw links first
+  const linkElements = links.map(link => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('class', `mindmap-edge ${link.target.type === 'bookmark' ? 'bookmark-edge' : ''}`);
+    mapGroup.appendChild(path);
+    return { el: path, link };
+  });
+
+  // Draw nodes
+  const nodeElements = nodes.map(node => {
+    const group = createMindmapNodeGroup(node);
+    mapGroup.appendChild(group);
+
+    // Drag behavior
+    group.addEventListener('mousedown', (e) => startDrag(e, node));
+
+    return { el: group, node };
+  });
+
+  // Physics Simulation Loop
+  let animationFrameId;
+  const alphaDecay = 0.02;
+  let alpha = 1;
+
+  function tick() {
+    if (alpha <= 0.01) {
+      // Stop loop but keep drag active
+      return;
+    }
+
+    alpha -= alphaDecay * 0.1; // Slow decay
+
+    // 1. Repulsion (Charge)
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const dx = nodes[i].x - nodes[j].x;
+        const dy = nodes[i].y - nodes[j].y;
+        const distSq = dx * dx + dy * dy || 1;
+        const force = (5000 * alpha) / distSq;
+        const fx = (dx / Math.sqrt(distSq)) * force;
+        const fy = (dy / Math.sqrt(distSq)) * force;
+
+        if (!nodes[i].fx) { nodes[i].vx += fx; nodes[i].vy += fy; }
+        if (!nodes[j].fx) { nodes[j].vx -= fx; nodes[j].vy -= fy; }
+      }
+    }
+
+    // 2. Spring Force (Links)
+    links.forEach(link => {
+      const dx = link.target.x - link.source.x;
+      const dy = link.target.y - link.source.y;
+      const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+      const force = (dist - link.distance) * 0.05 * alpha;
+      const fx = (dx / dist) * force;
+      const fy = (dy / dist) * force;
+
+      if (!link.source.fx) { link.source.vx += fx; link.source.vy += fy; }
+      if (!link.target.fx) { link.target.vx -= fx; link.target.vy -= fy; }
+    });
+
+    // 3. Center Gravity
+    nodes.forEach(node => {
+      if (node.fx) return;
+      const dx = centerX - node.x;
+      const dy = centerY - node.y;
+      node.vx += dx * 0.01 * alpha;
+      node.vy += dy * 0.01 * alpha;
+
+      // Update Position
+      node.vx *= 0.9; // Friction
+      node.vy *= 0.9;
+      node.x += node.vx;
+      node.y += node.vy;
+    });
+
+    // Update SVG
+    updateVisuals(nodeElements, linkElements);
+
+    animationFrameId = requestAnimationFrame(tick);
+  }
+
+  // Start simulation
+  tick();
+
+  simulation = {
+    stop: () => cancelAnimationFrame(animationFrameId),
+    restart: () => { alpha = 1; tick(); }
+  };
+
+  // Drag Handlers
+  let draggedNode = null;
+
+  function startDrag(e, node) {
+    e.preventDefault();
+    draggedNode = node;
+    node.fx = node.x; // Fix position
+    node.fy = node.y;
+    simulation.restart(); // Wake up simulation
+
+    document.addEventListener('mousemove', onDrag);
+    document.addEventListener('mouseup', endDrag);
+  }
+
+  function onDrag(e) {
+    if (!draggedNode) return;
+    const rect = mindmapSvg.getBoundingClientRect();
+    draggedNode.fx = e.clientX - rect.left;
+    draggedNode.fy = e.clientY - rect.top;
+    draggedNode.x = draggedNode.fx;
+    draggedNode.y = draggedNode.fy;
+  }
+
+  function endDrag() {
+    if (!draggedNode) return;
+    draggedNode.fx = null;
+    draggedNode.fy = null;
+    draggedNode = null;
+    document.removeEventListener('mousemove', onDrag);
+    document.removeEventListener('mouseup', endDrag);
+  }
+}
+
+function updateVisuals(nodeElements, linkElements) {
+  nodeElements.forEach(({ el, node }) => {
+    el.setAttribute('transform', `translate(${node.x}, ${node.y})`);
+  });
+
+  linkElements.forEach(({ el, link }) => {
+    // Curved path
+    const mx = (link.source.x + link.target.x) / 2;
+    const my = (link.source.y + link.target.y) / 2;
+    // Add some curve offset based on perpendicular vector? 
+    // For simplicity, just a straight line or slight curve is fine for physics.
+    // Let's do a straight line for physics stability, or a simple curve.
+    el.setAttribute('d', `M${link.source.x},${link.source.y} L${link.target.x},${link.target.y}`);
+  });
+}
+
+function createMindmapNodeGroup(node) {
+  const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  group.setAttribute('class', `mindmap-node ${node.type}`);
+
+  if (node.url) {
+    group.addEventListener('dblclick', (e) => {
+      e.stopPropagation();
+      chrome.tabs.create({ url: node.url });
+    });
+  }
+
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('r', node.r);
+  group.appendChild(circle);
+
+  if (node.type !== 'bookmark') {
+    const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+    label.textContent = node.title.length > 15 ? node.title.substring(0, 12) + '...' : node.title;
+    label.setAttribute('dy', node.r + 15);
+    label.setAttribute('text-anchor', 'middle');
+    group.appendChild(label);
+  } else {
+    const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+    title.textContent = node.title;
+    group.appendChild(title);
+  }
+
+  return group;
 }

@@ -1,132 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Smart Bookmark Manager</title>
-    <link rel="stylesheet" href="manage.css" />
-  </head>
-  <body>
-    <header>
-      <div>
-        <p class="eyebrow">Smart Bookmark Organizer</p>
-        <h1>All folders & tabs</h1>
-        <p class="subtitle">Manage every smart bookmark, edit notes, or clean up folders in one view.</p>
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Bookmark Manager</title>
+  <link rel="stylesheet" href="manage.css" />
+</head>
+
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">Smart Bookmark Organizer</p>
+      <h1>All folders & tabs</h1>
+      <p class="subtitle">Manage every smart bookmark, edit notes, or clean up folders in one view.</p>
+    </div>
+    <div class="actions">
+      <div class="view-toggle">
+        <button id="view-list" class="active" aria-pressed="true">List View</button>
+        <button id="view-mindmap" class="ghost" aria-pressed="false">Mindmap View</button>
       </div>
-      <div class="actions">
-        <button id="theme-toggle" class="ghost icon-button" aria-pressed="false" aria-label="Toggle dark mode" title="Toggle dark mode">
-          🌙
-        </button>
-        <button id="refresh">Refresh</button>
-        <button id="back-to-popup" class="ghost">Open popup</button>
-      </div>
-    </header>
+      <button id="theme-toggle" class="icon-button ghost" title="Toggle theme">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <path
+            d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42">
+          </path>
+        </svg>
+      </button>
+      <button id="refresh" class="ghost">Refresh</button>
+      <button id="back-to-popup">Open popup</button>
+    </div>
+  </header>
 
-    <section class="toolbar">
-      <label class="filter">
-        Filter folders
-        <select id="folder-filter"></select>
-      </label>
-      <label class="filter">
-        Search folders
-        <input id="folder-search" type="search" placeholder="Search folders or bookmark details" />
-      </label>
-      <label class="filter">
-        Saved on
-        <input id="date-filter" type="date" />
-      </label>
-    </section>
+  <div class="toolbar">
+    <button id="test-notification" class="ghost">Test Notification</button>
+    <button id="clear-all-bookmarks" class="ghost danger">Clear All</button>
+    <label class="filter">
+      Filter folders
+      <select id="folder-filter"></select>
+    </label>
+    <label class="filter">
+      Search folders
+      <input type="search" id="folder-search" placeholder="Search folders or bookmarks..." />
+    </label>
+    <label class="filter">
+      Saved on
+      <input type="date" id="date-filter" />
+    </label>
+  </div>
+  </section>
 
-    <section id="status" class="status muted">Loading folders…</section>
+  <section id="status" class="status muted">Loading folders…</section>
 
-    <section id="drag-note" class="drag-note muted">Drag a bookmark card onto any folder to move it.</section>
+  <section id="drag-note" class="drag-note muted">Drag a bookmark card onto any folder to move it.</section>
 
-    <section id="folders" class="grid"></section>
+  <section id="folders" class="grid"></section>
+  <section id="mindmap" class="mindmap-container hidden">
+    <svg id="mindmap-svg" width="100%" height="100%"></svg>
+  </section>
 
-    <template id="bookmark-template">
-      <article class="bookmark">
-        <div class="bookmark-head">
-          <div class="bookmark-meta">
-            <p class="eyebrow topic"></p>
-            <h3 class="title"></h3>
-            <p class="muted domain"></p>
-            <p class="muted saved-time"></p>
-          </div>
-          <div class="bookmark-actions">
-            <button
-              class="ghost menu-toggle"
-              aria-expanded="false"
-              aria-label="Bookmark actions"
-              title="Bookmark actions"
-            >
-              ⋮
-            </button>
-            <div class="action-menu hidden" role="menu">
-              <button class="ghost open" role="menuitem">Open</button>
-              <button class="ghost edit" role="menuitem">Edit</button>
-              <button class="danger delete" role="menuitem">Delete</button>
-            </div>
+  <template id="bookmark-template">
+    <article class="bookmark">
+      <div class="bookmark-head">
+        <div class="bookmark-meta">
+          <p class="eyebrow topic"></p>
+          <h3 class="title"></h3>
+          <p class="muted domain"></p>
+          <p class="muted saved-time"></p>
+        </div>
+        <div class="bookmark-actions">
+          <button class="ghost menu-toggle" aria-expanded="false" aria-label="Bookmark actions"
+            title="Bookmark actions">
+            ⋮
+          </button>
+          <div class="action-menu hidden" role="menu">
+            <button class="ghost open" role="menuitem">Open</button>
+            <button class="ghost edit" role="menuitem">Edit</button>
+            <button class="danger delete" role="menuitem">Delete</button>
           </div>
         </div>
-        <p class="muted description"></p>
-        <p class="muted reminder"></p>
-        <p class="notes"></p>
-        <p class="tags"></p>
+      </div>
+      <p class="muted description"></p>
+      <p class="muted reminder"></p>
+      <p class="notes"></p>
+      <p class="tags"></p>
 
-        <form class="edit-form hidden">
-          <label>
-            Title
-            <input name="title" type="text" />
-          </label>
-          <label>
-            Folder
-            <select name="folder"></select>
-          </label>
-          <label>
-            Reminder
-            <input name="reminder" type="datetime-local" />
-          </label>
-          <label>
-            Notes
-            <textarea name="notes" rows="2" placeholder="Add context for future you"></textarea>
-          </label>
-          <label>
-            Tags (comma separated)
-            <input name="tags" type="text" placeholder="project, quick-read" />
-          </label>
-          <div class="form-actions">
-            <button type="submit">Save changes</button>
-            <button type="button" class="ghost cancel">Cancel</button>
-          </div>
-        </form>
-      </article>
-    </template>
+      <form class="edit-form hidden">
+        <label>
+          Title
+          <input name="title" type="text" />
+        </label>
+        <label>
+          Folder
+          <select name="folder"></select>
+        </label>
+        <label>
+          Reminder
+          <input name="reminder" type="datetime-local" />
+        </label>
+        <label>
+          Notes
+          <textarea name="notes" rows="2" placeholder="Add context for future you"></textarea>
+        </label>
+        <label>
+          Tags (comma separated)
+          <input name="tags" type="text" placeholder="project, quick-read" />
+        </label>
+        <div class="form-actions">
+          <button type="submit">Save changes</button>
+          <button type="button" class="ghost cancel">Cancel</button>
+        </div>
+      </form>
+    </article>
+  </template>
 
-    <template id="folder-template">
-      <section class="folder-card">
-        <header>
-          <div class="folder-heading">
-            <span class="folder-color" aria-hidden="true"></span>
-            <div>
-              <p class="eyebrow">Folder</p>
-              <h2 class="folder-title"></h2>
-              <p class="muted folder-count"></p>
-            </div>
+  <template id="folder-template">
+    <section class="folder-card">
+      <header>
+        <div class="folder-heading">
+          <span class="folder-color" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">Folder</p>
+            <h2 class="folder-title"></h2>
+            <p class="muted folder-count"></p>
           </div>
-          <div class="folder-actions">
-            <button
-              class="ghost icon-button delete-folder"
-              aria-label="Delete folder"
-              title="Delete folder"
-            >
-              🗑
-            </button>
-          </div>
-        </header>
-        <div class="bookmarks"></div>
-      </section>
-    </template>
+        </div>
+        <div class="folder-actions">
+          <button class="ghost icon-button delete-folder" aria-label="Delete folder" title="Delete folder">
+            🗑
+          </button>
+        </div>
+      </header>
+      <div class="bookmarks"></div>
+    </section>
+  </template>
 
-    <script src="manage.js"></script>
-  </body>
+  <script src="manage.js"></script>
+</body>
+
 </html>

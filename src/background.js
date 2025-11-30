@@ -497,6 +497,9 @@ async function getReminderIconUrl() {
   return reminderIconDataUrl;
 }
 
+// Simple transparent 1x1 pixel as absolute fallback
+const FALLBACK_ICON = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+P+/HgAFhAJ/wlseKgAAAABJRU5ErkJggg==';
+
 function blobToDataUrl(blob) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -672,6 +675,23 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
     return true;
   }
 
+  if (request.type === 'DELETE_ALL') {
+    deleteAllBookmarks()
+      .then(sendResponse)
+      .catch((error) => sendResponse({ error: error.message }));
+    return true;
+  }
+
+  if (request.type === 'TEST_NOTIFICATION') {
+    notifyReminder({
+      title: 'Test Notification',
+      notes: 'This is a test reminder from Smart Bookmarks.',
+      id: 'test'
+    }).then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ error: error.message }));
+    return true;
+  }
+
   return false;
 });
 
@@ -704,15 +724,27 @@ async function collectPageMetadata(tabId) {
       const keywords = document.querySelector('meta[name="keywords"]')?.content || '';
       const ogTitle = document.querySelector('meta[property="og:title"]')?.content || '';
       const ogDescription = document.querySelector('meta[property="og:description"]')?.content || '';
+      const articleSection = document.querySelector('meta[property="article:section"]')?.content || '';
+      const articleTags = Array.from(document.querySelectorAll('meta[property="article:tag"]'))
+        .map(m => m.content)
+        .join(', ');
+      const category = document.querySelector('meta[name="category"]')?.content || '';
+
+      const iconUrl = document.querySelector('link[rel="icon"]')?.href ||
+        document.querySelector('link[rel="shortcut icon"]')?.href ||
+        document.querySelector('meta[property="og:image"]')?.content || '';
+
       const bodyText = document.body?.innerText || '';
       const cleanedBody = bodyText.replace(/\s+/g, ' ').trim();
-      const snippet = cleanedBody.slice(0, 260);
+      const snippet = cleanedBody.slice(0, 300);
 
       return {
         description: ogDescription || description,
-        keywords,
+        keywords: [keywords, articleTags, category].filter(Boolean).join(', '),
         ogTitle,
-        snippet
+        snippet,
+        section: articleSection,
+        iconUrl
       };
     }
   });
@@ -729,6 +761,7 @@ function chooseTopic(pageMetadata, tab) {
     description: (pageMetadata.description || '').toLowerCase(),
     ogTitle: (pageMetadata.ogTitle || '').toLowerCase(),
     snippet: (pageMetadata.snippet || '').toLowerCase(),
+    section: (pageMetadata.section || '').toLowerCase(),
     title: (tab.title || '').toLowerCase(),
     path: pathText,
     domain
@@ -736,7 +769,8 @@ function chooseTopic(pageMetadata, tab) {
 
   const scored = TOPIC_PROFILES.map((profile) => {
     const score =
-      scoreText(baseSignals.keywords, profile, 4) +
+      scoreText(baseSignals.keywords, profile, 5) +
+      scoreText(baseSignals.section, profile, 5) +
       scoreText(baseSignals.description, profile, 3) +
       scoreText(baseSignals.ogTitle, profile, 3) +
       scoreText(baseSignals.snippet, profile, 2) +
@@ -861,6 +895,7 @@ async function hydrateReminders() {
 }
 
 chrome.alarms?.onAlarm.addListener(async (alarm) => {
+  console.log('Alarm fired:', alarm.name);
   if (!alarm?.name?.startsWith(REMINDER_ALARM_PREFIX)) {
     return;
   }
@@ -868,11 +903,12 @@ chrome.alarms?.onAlarm.addListener(async (alarm) => {
   const bookmarkId = alarm.name.replace(REMINDER_ALARM_PREFIX, '');
   const metadata = await getStoredMetadata(bookmarkId);
 
-  if (!metadata) {
-    return;
+  if (metadata) {
+    console.log('Found metadata for reminder:', metadata);
+    await notifyReminder({ ...metadata, id: bookmarkId });
+  } else {
+    console.warn('No metadata found for reminder:', bookmarkId);
   }
-
-  await notifyReminder(metadata);
 
   // Clear the reminder so it does not rehydrate on future loads.
   await updateBookmark(bookmarkId, { reminder: '' });
@@ -890,20 +926,30 @@ chrome.notifications?.onClicked.addListener(async (notificationId) => {
 });
 
 async function notifyReminder(metadata) {
+  console.log('notifyReminder called', metadata);
   if (!chrome?.notifications?.create) {
+    console.error('chrome.notifications.create is not available');
     return;
   }
 
   if (chrome.notifications.getPermissionLevel) {
     const level = await chrome.notifications.getPermissionLevel();
+    console.log('Notification permission level:', level);
     if (level !== 'granted') {
       console.warn('Notifications permission is not granted; skipping reminder');
       return;
     }
   }
 
+  let iconUrl;
+  try {
+    iconUrl = await getReminderIconUrl();
+  } catch (e) {
+    console.warn('Failed to get reminder icon, using fallback', e);
+    iconUrl = FALLBACK_ICON;
+  }
+
   const extensionName = chrome.runtime?.getManifest?.().name || 'Smart Bookmark Organizer';
-  const iconUrl = await getReminderIconUrl();
   const title = metadata.title || 'Bookmark reminder';
   const body = metadata.notes || metadata.description || metadata.snippet || metadata.url || 'You set a reminder for this bookmark.';
   const message = `${title} — ${body}`;
@@ -912,13 +958,18 @@ async function notifyReminder(metadata) {
     type: 'basic',
     title: extensionName,
     message,
-    iconUrl: iconUrl || undefined,
+    iconUrl: iconUrl || FALLBACK_ICON,
     priority: 2,
     requireInteraction: true
   };
 
-  await chrome.notifications.create(`${REMINDER_ALARM_PREFIX}${metadata.id}`, options);
-  await playReminderSound();
+  try {
+    const notificationId = await chrome.notifications.create(`${REMINDER_ALARM_PREFIX}${metadata.id}`, options);
+    console.log('Notification created with ID:', notificationId);
+    await playReminderSound();
+  } catch (error) {
+    console.error('Failed to create notification', error);
+  }
 }
 
 async function playReminderSound() {
@@ -1028,7 +1079,8 @@ async function storeMetadata(bookmarkId, topic, pageMetadata, url, title, tags =
     domain: new URL(url).hostname,
     notes: previous.notes || '',
     tags: tags.length > 0 ? tags : previous.tags || [],
-    reminder: previous.reminder || ''
+    reminder: previous.reminder || '',
+    iconUrl: pageMetadata.iconUrl || previous.iconUrl || ''
   };
 
   allMetadata[bookmarkId] = metadata;
@@ -1049,6 +1101,20 @@ async function getSmartTree() {
 
   const enriched = enrichTree(tree[0], metadataMap, null, colorMap);
   return enriched;
+}
+
+async function deleteAllBookmarks() {
+  const cached = await chrome.storage.local.get(SMART_ROOT_ID_KEY);
+  const rootId = cached[SMART_ROOT_ID_KEY];
+  if (rootId) {
+    try {
+      await chrome.bookmarks.removeTree(rootId);
+    } catch (e) {
+      // Ignore if already gone
+    }
+    await chrome.storage.local.remove([SMART_ROOT_ID_KEY, 'smartMetadata', FOLDER_COLORS_KEY]);
+  }
+  return { success: true };
 }
 
 function enrichTree(node, metadataMap, parentId = null, folderColors = {}) {
@@ -1094,7 +1160,8 @@ async function updateBookmark(bookmarkId, updates = {}) {
       domain: bookmarkNode.url ? new URL(bookmarkNode.url).hostname : '',
       notes: '',
       tags: [],
-      reminder: ''
+      reminder: '',
+      iconUrl: ''
     };
   }
 
@@ -1104,7 +1171,9 @@ async function updateBookmark(bookmarkId, updates = {}) {
     ...('tags' in updates ? { tags: updates.tags } : {}),
     ...('description' in updates ? { description: updates.description } : {}),
     ...('title' in updates ? { title: updates.title } : {}),
-    ...('reminder' in updates ? { reminder: updates.reminder || '' } : {})
+    ...('title' in updates ? { title: updates.title } : {}),
+    ...('reminder' in updates ? { reminder: updates.reminder || '' } : {}),
+    ...('iconUrl' in updates ? { iconUrl: updates.iconUrl } : {})
   };
   await chrome.storage.local.set({ smartMetadata: stored });
 

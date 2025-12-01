@@ -69,18 +69,32 @@ header {
 
 .toolbar {
   display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  width: 100%;
 }
 
-.toolbar .filter {
+.search-container {
+  flex: 1;
+  max-width: none;
+  margin: 0;
+  position: relative;
+}
+
+.filters {
+  display: flex;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.filter {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  font-weight: 700;
-  color: var(--text);
-  min-width: 200px;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-weight: 500;
 }
 
 .toolbar select,
@@ -105,8 +119,172 @@ header {
   font-weight: 700;
 }
 
+.ml-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.ml-toggle input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.ml-toggle span {
+  font-weight: 600;
+  color: var(--text);
+}
+
 h1 {
   margin: 0 0 8px;
+}
+
+/* Search Engine UI */
+.search-container {
+  max-width: 800px;
+  margin: 0 auto 32px;
+  position: relative;
+}
+
+.search-container input[type="search"] {
+  width: 100%;
+  padding: 16px 24px;
+  font-size: 16px;
+  border-radius: 24px;
+  border: 2px solid var(--border);
+  background: var(--panel);
+  color: var(--text);
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.search-container input[type="search"]:focus {
+  border-color: var(--accent);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+  outline: none;
+}
+
+.search-results {
+  margin-top: 24px;
+}
+
+.search-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--text-muted);
+  font-size: 13px;
+  margin-bottom: 16px;
+  padding: 0 8px;
+}
+
+.search-result {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.search-result:hover {
+  border-color: var(--accent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+.result-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 6px;
+}
+
+.result-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.result-favicon {
+  width: 16px;
+  height: 16px;
+  border-radius: 2px;
+}
+
+.result-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  line-height: 1.3;
+}
+
+.result-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.relevance-score {
+  display: inline-block;
+  background: var(--accent);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.result-folder {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.result-url {
+  font-size: 13px;
+  color: var(--success);
+  margin-bottom: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-snippet {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+mark {
+  background: rgba(255, 215, 0, 0.3);
+  color: inherit;
+  padding: 0 2px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+.no-results {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-muted);
+}
+
+.no-results p:first-child {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text);
 }
 
 .subtitle {
@@ -560,10 +738,30 @@ button:disabled {
 
 .mindmap-edge {
   fill: none;
-  stroke: var(--border);
-  stroke-width: 2px;
   stroke-linecap: round;
+  transition: opacity 0.3s ease;
+}
+
+/* Hierarchy links (folder to bookmarks) - subtle gray */
+.mindmap-edge.hierarchy-edge {
+  stroke: var(--border);
+  opacity: 0.3;
+  stroke-width: 1px;
+}
+
+/* Similarity links (related bookmarks) - prominent accent color */
+.mindmap-edge.similarity-edge {
+  stroke: var(--accent);
   opacity: 0.6;
+  stroke-width: 2px;
+  stroke-dasharray: 5, 5;
+  animation: dash 20s linear infinite;
+}
+
+@keyframes dash {
+  to {
+    stroke-dashoffset: -100;
+  }
 }
 
 .mindmap-edge.bookmark-edge {

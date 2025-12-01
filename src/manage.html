@@ -29,31 +29,41 @@
         </svg>
       </button>
       <button id="refresh" class="ghost">Refresh</button>
-      <button id="back-to-popup">Open popup</button>
+      <button id="clear-all-bookmarks" class="ghost danger">Clear All</button>
     </div>
   </header>
 
   <div class="toolbar">
-    <button id="test-notification" class="ghost">Test Notification</button>
-    <button id="clear-all-bookmarks" class="ghost danger">Clear All</button>
-    <label class="filter">
-      Filter folders
-      <select id="folder-filter"></select>
-    </label>
-    <label class="filter">
-      Search folders
-      <input type="search" id="folder-search" placeholder="Search folders or bookmarks..." />
-    </label>
-    <label class="filter">
-      Saved on
-      <input type="date" id="date-filter" />
-    </label>
+    <div class="search-container">
+      <input type="search" id="search-input" placeholder="🔍 Search your bookmarks..." />
+      <div id="search-results" class="search-results hidden">
+        <div class="search-meta">
+          <span id="result-count"></span>
+          <span id="search-time"></span>
+        </div>
+        <div id="results-list"></div>
+        <div id="no-results" class="no-results hidden">
+          <p>No results found</p>
+          <p class="muted">Try different keywords or check your spelling</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <label class="filter">
+        <select id="folder-filter">
+          <option value="all">All Folders</option>
+        </select>
+      </label>
+      <label class="filter">
+        <input type="date" id="date-filter" title="Filter by date" />
+      </label>
+    </div>
   </div>
-  </section>
 
   <section id="status" class="status muted">Loading folders…</section>
 
-  <section id="drag-note" class="drag-note muted">Drag a bookmark card onto any folder to move it.</section>
+  <p class="drag-note" id="drag-note">Drag a bookmark card onto any folder to move it.</p>
 
   <section id="folders" class="grid"></section>
   <section id="mindmap" class="mindmap-container hidden">
@@ -136,6 +146,7 @@
     </section>
   </template>
 
+  <script src="text-similarity.js"></script>
   <script src="manage.js"></script>
 </body>
 

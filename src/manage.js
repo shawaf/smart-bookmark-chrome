@@ -1,11 +1,11 @@
 const statusEl = document.getElementById('status');
 const foldersContainer = document.getElementById('folders');
 const refreshButton = document.getElementById('refresh');
-const backToPopup = document.getElementById('back-to-popup');
-const testNotificationBtn = document.getElementById('test-notification');
+const backToPopup = null; // Removed
+const testNotificationBtn = null; // Removed
 const clearAllBtn = document.getElementById('clear-all-bookmarks');
 const folderFilter = document.getElementById('folder-filter');
-const folderSearch = document.getElementById('folder-search');
+const searchInput = document.getElementById('search-input');
 const dateFilter = document.getElementById('date-filter');
 const themeToggle = document.getElementById('theme-toggle');
 const viewListBtn = document.getElementById('view-list');
@@ -13,6 +13,8 @@ const viewMindmapBtn = document.getElementById('view-mindmap');
 const foldersSection = document.getElementById('folders');
 const mindmapSection = document.getElementById('mindmap');
 const mindmapSvg = document.getElementById('mindmap-svg');
+const mlToggle = null; // Removed, always on
+const dragNote = document.getElementById('drag-note');
 const THEME_KEY = 'smartBookmarkTheme';
 let folderOptions = [];
 let currentTree = null;
@@ -69,9 +71,7 @@ function initFilters() {
 }
 
 refreshButton.addEventListener('click', loadTree);
-backToPopup.addEventListener('click', () => {
-  chrome.tabs.create({ url: chrome.runtime.getURL('src/popup.html') });
-});
+
 
 if (testNotificationBtn) {
   testNotificationBtn.addEventListener('click', async () => {
@@ -105,6 +105,8 @@ if (clearAllBtn) {
   });
 }
 
+// ML Classification Toggle
+
 initThemeToggle();
 
 if (!chrome?.runtime?.sendMessage) {
@@ -117,10 +119,32 @@ if (!chrome?.runtime?.sendMessage) {
     currentFilterKey = folderFilter.value;
     renderFoldersFromState();
   });
-  folderSearch.addEventListener('input', (event) => {
-    currentSearch = event.target.value.toLowerCase();
-    renderFoldersFromState();
-  });
+  searchInput.addEventListener('input', debounce(async (event) => {
+    const query = event.target.value.trim();
+
+    if (!query) {
+      hideSearchResults();
+      showFolderView();
+      return;
+    }
+
+    // Show loading state if needed
+
+    const startTime = performance.now();
+
+    // Collect all bookmarks
+    const allBookmarks = collectAllBookmarks(currentTree);
+
+    // Search using TF-IDF (from text-similarity.js)
+    // Note: searchBookmarks is globally available from text-similarity.js
+    const results = searchBookmarks(query, allBookmarks);
+
+    const endTime = performance.now();
+    const searchTime = (endTime - startTime).toFixed(0);
+
+    // Display results
+    displaySearchResults(results, query, searchTime);
+  }, 300));
   dateFilter.addEventListener('change', (event) => {
     currentDateFilter = event.target.value;
     renderFoldersFromState();
@@ -700,6 +724,7 @@ function renderMindmap() {
   // Prepare nodes and links
   const nodes = [];
   const links = [];
+  const allBookmarks = []; // Track all bookmarks for ML similarity
 
   // Root
   const rootNode = { id: 'root', x: centerX, y: centerY, vx: 0, vy: 0, type: 'root', title: 'All Bookmarks', r: 30 };
@@ -718,7 +743,7 @@ function renderMindmap() {
       r: 20
     };
     nodes.push(folderNode);
-    links.push({ source: rootNode, target: folderNode, distance: 150 });
+    links.push({ source: rootNode, target: folderNode, distance: 150, type: 'hierarchy' });
 
     const bookmarks = (folder.children || []).filter((c) => c.url).slice(0, 5);
     bookmarks.forEach((bm) => {
@@ -731,13 +756,76 @@ function renderMindmap() {
         type: 'bookmark',
         title: bm.title,
         url: bm.url,
+        metadata: bm.metadata,
         r: 6
       };
       nodes.push(bmNode);
-      links.push({ source: folderNode, target: bmNode, distance: 80 });
+      links.push({ source: folderNode, target: bmNode, distance: 80, type: 'hierarchy' });
+
+      // Track bookmark for ML similarity
+      allBookmarks.push({
+        node: bmNode,
+        nodeIndex: nodes.length - 1,
+        title: bm.title,
+        metadata: bm.metadata || {}
+      });
     });
   });
 
+  // Add ML-based similarity links if enabled
+  addSimilarityLinks(allBookmarks, nodes, links).then(() => {
+    // Continue with rendering after similarity links are added
+    renderMindmapWithLinks(nodes, links, centerX, centerY, width, height);
+  }).catch(error => {
+    console.warn('Failed to add similarity links, rendering without them:', error);
+    renderMindmapWithLinks(nodes, links, centerX, centerY, width, height);
+  });
+}
+
+// Add similarity-based links between related bookmarks
+async function addSimilarityLinks(allBookmarks, nodes, links) {
+  if (allBookmarks.length < 2) return; // Need at least 2 bookmarks
+
+  try {
+    console.log('Calculating bookmark similarities using TF-IDF...');
+
+    // Calculate similarity matrix using text-based approach
+    const similarityMatrix = calculateTextSimilarity(allBookmarks);
+
+    // Add links between similar bookmarks (threshold: 0.3 for text similarity)
+    const threshold = 0.3;
+    let similarityLinksAdded = 0;
+
+    for (let i = 0; i < allBookmarks.length; i++) {
+      const related = getRelatedBookmarks(i, similarityMatrix, threshold);
+
+      related.forEach(j => {
+        if (i < j) { // Avoid duplicate links
+          const sourceNode = nodes[allBookmarks[i].nodeIndex];
+          const targetNode = nodes[allBookmarks[j].nodeIndex];
+
+          links.push({
+            source: sourceNode,
+            target: targetNode,
+            distance: 60,
+            type: 'similarity',
+            strength: similarityMatrix[i][j]
+          });
+
+          similarityLinksAdded++;
+        }
+      });
+    }
+
+    console.log(`Added ${similarityLinksAdded} similarity links`);
+  } catch (error) {
+    console.error('Error adding similarity links:', error);
+    throw error;
+  }
+}
+
+// Render mindmap with the prepared nodes and links
+function renderMindmapWithLinks(nodes, links, centerX, centerY, width, height) {
   // Create SVG elements
   const mapGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   mindmapSvg.appendChild(mapGroup);
@@ -870,12 +958,16 @@ function updateVisuals(nodeElements, linkElements) {
   });
 
   linkElements.forEach(({ el, link }) => {
-    // Curved path
+    // Style based on link type
+    if (link.type === 'similarity') {
+      el.setAttribute('class', 'mindmap-edge similarity-edge');
+    } else {
+      el.setAttribute('class', 'mindmap-edge hierarchy-edge');
+    }
+
+    // Curved path for better visualization
     const mx = (link.source.x + link.target.x) / 2;
     const my = (link.source.y + link.target.y) / 2;
-    // Add some curve offset based on perpendicular vector? 
-    // For simplicity, just a straight line or slight curve is fine for physics.
-    // Let's do a straight line for physics stability, or a simple curve.
     el.setAttribute('d', `M${link.source.x},${link.source.y} L${link.target.x},${link.target.y}`);
   });
 }
@@ -908,4 +1000,152 @@ function createMindmapNodeGroup(node) {
   }
 
   return group;
+}
+
+// --- Search Engine Functions ---
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+}
+
+function collectAllBookmarks(tree) {
+  const bookmarks = [];
+  if (!tree) return bookmarks;
+
+  function traverse(node, folderTitle = 'Uncategorized', folderId = '') {
+    if (node.url) {
+      bookmarks.push({
+        ...node,
+        folderTitle: folderTitle,
+        folderId: folderId
+      });
+    }
+
+    if (node.children) {
+      // Use current node title as folder title for children, unless it's the root
+      const nextTitle = node.id === '0' || node.id === 'root' ? folderTitle : node.title;
+      const nextId = node.id;
+
+      node.children.forEach(child => traverse(child, nextTitle, nextId));
+    }
+  }
+
+  // Handle array or single node
+  if (Array.isArray(tree)) {
+    tree.forEach(node => traverse(node));
+  } else if (tree.children) {
+    tree.children.forEach(child => traverse(child));
+  } else {
+    traverse(tree);
+  }
+
+  return bookmarks;
+}
+
+function hideSearchResults() {
+  const resultsContainer = document.getElementById('search-results');
+  const foldersSection = document.getElementById('folders');
+  const mindmapSection = document.getElementById('mindmap');
+
+  if (resultsContainer) resultsContainer.classList.add('hidden');
+
+  // Restore previous view
+  if (mindmapSection && !mindmapSection.classList.contains('hidden')) {
+    // Keep mindmap visible
+  } else {
+    if (foldersSection) foldersSection.classList.remove('hidden');
+  }
+}
+
+function showFolderView() {
+  const foldersSection = document.getElementById('folders');
+  const mindmapSection = document.getElementById('mindmap');
+
+  // Only show folders if mindmap is not active
+  if (mindmapSection.classList.contains('hidden')) {
+    foldersSection.classList.remove('hidden');
+  }
+}
+
+function displaySearchResults(results, query, timeMs) {
+  const resultsContainer = document.getElementById('search-results');
+  const resultsList = document.getElementById('results-list');
+  const resultCount = document.getElementById('result-count');
+  const searchTime = document.getElementById('search-time');
+  const noResults = document.getElementById('no-results');
+  const foldersSection = document.getElementById('folders');
+  const mindmapSection = document.getElementById('mindmap');
+
+  // Hide other views
+  if (foldersSection) foldersSection.classList.add('hidden');
+  if (mindmapSection) mindmapSection.classList.add('hidden');
+
+  // Show results container
+  resultsContainer.classList.remove('hidden');
+
+  // Update meta info
+  resultCount.textContent = `Found ${results.length} result${results.length !== 1 ? 's' : ''}`;
+  searchTime.textContent = `(${timeMs} ms)`;
+
+  // Clear previous results
+  resultsList.innerHTML = '';
+
+  if (results.length === 0) {
+    noResults.classList.remove('hidden');
+    return;
+  }
+
+  noResults.classList.add('hidden');
+
+  // Render results
+  results.forEach(item => {
+    const bm = item.bookmark;
+    const score = Math.round(item.score * 100);
+
+    const resultEl = document.createElement('div');
+    resultEl.className = 'search-result';
+    resultEl.addEventListener('click', () => {
+      chrome.tabs.create({ url: bm.url });
+    });
+
+    // Generate snippet
+    const snippetText = bm.metadata?.description || bm.metadata?.snippet || bm.url;
+    const snippet = generateSnippet(snippetText, tokenize(query));
+    const highlightedSnippet = highlightTerms(snippet, tokenize(query));
+    const highlightedTitle = highlightTerms(bm.title, tokenize(query));
+
+    resultEl.innerHTML = `
+      <div class="result-header">
+        <div class="result-title-row">
+          <img src="${getFaviconUrl(bm.url)}" class="result-favicon" onerror="this.src='icons/icon16.png'">
+          <div class="result-title">${highlightedTitle}</div>
+        </div>
+        <div class="result-meta">
+          <span class="relevance-score" title="Relevance Score">${score}% Match</span>
+          <span class="result-folder">${bm.folderTitle || 'Uncategorized'}</span>
+        </div>
+      </div>
+      <div class="result-url">${bm.url}</div>
+      <div class="result-snippet">${highlightedSnippet}</div>
+    `;
+
+    resultsList.appendChild(resultEl);
+  });
+}
+
+function getFaviconUrl(u) {
+  try {
+    const urlObj = new URL(u);
+    return `https://www.google.com/s2/favicons?domain=${urlObj.hostname}&sz=32`;
+  } catch (e) {
+    return 'icons/icon16.png';
+  }
 }

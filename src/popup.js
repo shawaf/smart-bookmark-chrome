@@ -11,6 +11,7 @@ const metadataDescription = document.getElementById('metadata-description');
 const metadataSnippet = document.getElementById('metadata-snippet');
 const metadataTags = document.getElementById('metadata-tags');
 const metadataIcon = document.getElementById('metadata-icon');
+const mlBadge = document.getElementById('ml-badge');
 const folderEditor = document.getElementById('folder-editor');
 const folderSelect = document.getElementById('folder-select');
 const moveFolderButton = document.getElementById('move-folder');
@@ -97,6 +98,15 @@ function displayMetadata(metadata) {
 
   metadataCard.classList.remove('hidden');
   metadataTopic.textContent = metadata.topic;
+
+  // Show ML badge if ML was used
+  if (metadata.mlUsed && mlBadge) {
+    mlBadge.classList.remove('hidden');
+    mlBadge.title = `Classified using Machine Learning (${Math.round(metadata.mlConfidence * 100)}% confidence)`;
+  } else if (mlBadge) {
+    mlBadge.classList.add('hidden');
+  }
+
   metadataTitle.textContent = metadata.title;
   metadataDomain.textContent = metadata.domain;
 

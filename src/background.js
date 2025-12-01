@@ -3,6 +3,11 @@ const DEFAULT_TOPIC = 'Unsorted';
 const ICON_DATA_PATH = 'src/icon-base64.json';
 const ICON_SIZES = [16, 48, 128];
 const FOLDER_COLORS_KEY = 'smartFolderColors';
+const ML_ENABLED_KEY = 'mlEnabled';
+
+// Import ML classifier functions
+importScripts('ml-classifier.js');
+
 const TOPIC_PROFILES = [
   {
     name: 'Data Structures & Algorithms',
@@ -695,6 +700,20 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   return false;
 });
 
+// Determine whether ML classification should be used; defaults to enabled.
+async function isMLEnabled() {
+  try {
+    const stored = await chrome.storage.local.get(ML_ENABLED_KEY);
+    if (typeof stored[ML_ENABLED_KEY] === 'boolean') {
+      return stored[ML_ENABLED_KEY];
+    }
+  } catch (error) {
+    console.warn('Unable to read ML preference; defaulting to enabled.', error);
+  }
+
+  return true;
+}
+
 async function handleSmartBookmark() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab) {
@@ -702,7 +721,39 @@ async function handleSmartBookmark() {
   }
 
   const pageMetadata = await collectPageMetadata(tab.id);
-  const topic = chooseTopic(pageMetadata, tab);
+
+  // Try ML classification first
+  let topic = DEFAULT_TOPIC;
+  let mlUsed = false;
+  let mlConfidence = 0;
+
+  const mlEnabled = await isMLEnabled();
+
+  if (mlEnabled) {
+    try {
+      console.log('Attempting ML classification...');
+      const mlResult = await classifyBookmark(pageMetadata, tab, TOPIC_PROFILES);
+
+      // Use ML result if confidence is above threshold
+      if (mlResult.confidence > 0.5) {
+        topic = mlResult.topic;
+        mlUsed = true;
+        mlConfidence = mlResult.confidence;
+        console.log('Using ML classification:', topic, 'confidence:', mlConfidence);
+      } else {
+        console.log('ML confidence too low:', mlResult.confidence, '- falling back to keywords');
+      }
+    } catch (error) {
+      console.warn('ML classification failed, falling back to keyword matching:', error);
+    }
+  }
+
+  // Fallback to keyword matching if ML not used
+  if (!mlUsed) {
+    topic = chooseTopic(pageMetadata, tab);
+    console.log('Using keyword-based classification:', topic);
+  }
+
   const tags = deriveTags(pageMetadata, tab, topic);
   const rootId = await ensureRootFolder();
   const topicFolderId = await ensureTopicFolder(topic, rootId);
@@ -710,9 +761,9 @@ async function handleSmartBookmark() {
   const existingId = await findExistingBookmark(tab.url, topicFolderId);
   const bookmarkId = existingId || (await createBookmark(tab, topicFolderId));
 
-  await storeMetadata(bookmarkId, topic, pageMetadata, tab.url, tab.title, tags);
+  await storeMetadata(bookmarkId, topic, pageMetadata, tab.url, tab.title, tags, mlUsed, mlConfidence);
 
-  return { topic, bookmarkId, tags };
+  return { topic, bookmarkId, tags, mlUsed, mlConfidence };
 }
 
 async function collectPageMetadata(tabId) {
@@ -1062,7 +1113,7 @@ async function createBookmark(tab, parentId) {
   return bookmark.id;
 }
 
-async function storeMetadata(bookmarkId, topic, pageMetadata, url, title, tags = []) {
+async function storeMetadata(bookmarkId, topic, pageMetadata, url, title, tags = [], mlUsed = false, mlConfidence = 0) {
   const existing = await chrome.storage.local.get('smartMetadata');
   const allMetadata = existing.smartMetadata || {};
   const previous = allMetadata[bookmarkId] || {};
@@ -1080,7 +1131,9 @@ async function storeMetadata(bookmarkId, topic, pageMetadata, url, title, tags =
     notes: previous.notes || '',
     tags: tags.length > 0 ? tags : previous.tags || [],
     reminder: previous.reminder || '',
-    iconUrl: pageMetadata.iconUrl || previous.iconUrl || ''
+    iconUrl: pageMetadata.iconUrl || previous.iconUrl || '',
+    mlUsed,
+    mlConfidence
   };
 
   allMetadata[bookmarkId] = metadata;
